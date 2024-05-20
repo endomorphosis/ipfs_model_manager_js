@@ -12,6 +12,8 @@ import { spawn } from 'child_process';
 import { run } from 'shutil';
 import { randomUUID } from 'crypto';
 import crypto from 'crypto';
+import https from 'https';
+import * as tar from 'tar';
 
 // TODO: This fails if aria2c is not installed but doesn't fail gracefully and in a way that diagnoses the problem to the user 
 //       Either add a check for aria2c and report to user or add aria2c to the install that is ran before hand
@@ -121,8 +123,12 @@ export class InstallIPFS {
                 execSync(`cd ${tmpDir}/kubo && sudo bash install.sh`);
                 const results = execSync("ipfs --version").toString().trim();
                 const serviceConfig = fs.readFileSync(path.join(thisDir, 'ipfs.service')).toString();
-                fs.writeFileSync("/etc/systemd/system/ipfs.service", serviceConfig);
-                execSync("systemctl enable ipfs");
+                if (os.userInfo().username == "root") {
+                    fs.writeFileSync("/etc/systemd/system/ipfs.service", serviceConfig);
+                    execSync("systemctl enable ipfs");
+                }else{
+                    console.log('Please run as root user to enable systemd service');
+                }
                 return results.includes("ipfs");
             } catch (e) {
                 console.error(e);
@@ -131,7 +137,7 @@ export class InstallIPFS {
         }
     }
 
-    installIPFSClusterFollow(options = {}) {
+    async installIPFSClusterFollow(options = {}) {
         // Check if ipfs-cluster-follow is already installed
         let followCmdExists = execSync('which ipfs-cluster-follow')
         if (followCmdExists.length > 0) {
@@ -146,45 +152,48 @@ export class InstallIPFS {
             let thisDir = this.thisDir || path.dirname(new URL(import.meta.url).pathname);
 
             const file = fs.createWriteStream(tarPath);
-            https.get(url, function(response) {
-                response.pipe(file);
-                file.on('finish', () => {
-                    file.close();
-                    console.log('Download completed.');
+            new Promise((resolve, reject) => {
+                https.get(url, function(response) {
+                    response.pipe(file);
+                    file.on('finish', () => {
+                        file.close();
+                        console.log('Download completed.');
 
-                    // Extracting tarball
-                    tar.x({
-                        file: tarPath,
-                        C: tmpDir,
-                    }).then(() => {
-                        console.log('Extraction completed.');
-                        const binPath = path.join(tmpDir, 'ipfs-cluster-follow', 'ipfs-cluster-follow');
-                        execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-follow`);
-                        try {
-                            // Verify installation
-                            const version = execSync('ipfs-cluster-follow --version').toString().trim();
-                            console.log(`Installed ipfs-cluster-follow version: ${version}`);
-                            if (os.userInfo().username == "root") {
-                                let serviceConfig = fs.readFileSync(path.join(thisDir, 'ipfs_clusterFollow.service')).toString();
-                                fs.writeFileSync('/etc/systemd/system/ipfs-cluster-follow.service', serviceConfig);
-                                execSync('systemctl enable ipfs-cluster-follow');
-                                console.log('ipfs-cluster-follow service enabled.');
+                        // Extracting tarball
+                        tar.x({
+                            file: tarPath,
+                            C: tmpDir,
+                        }).then(() => {
+                            console.log('Extraction completed.');
+                            const binPath = path.join(tmpDir, 'ipfs-cluster-follow', 'ipfs-cluster-follow');
+                            execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-follow`);
+                            try {
+                                // Verify installation
+                                const version = execSync('ipfs-cluster-follow --version').toString().trim();
+                                console.log(`Installed ipfs-cluster-follow version: ${version}`);
+                                if (os.userInfo().username == "root") {
+                                    let serviceConfig = fs.readFileSync(path.join(thisDir, 'ipfs_clusterFollow.service')).toString();
+                                    fs.writeFileSync('/etc/systemd/system/ipfs-cluster-follow.service', serviceConfig);
+                                    execSync('systemctl enable ipfs-cluster-follow');
+                                    console.log('ipfs-cluster-follow service enabled.');
+                                }
+                                else{
+                                    console.log('Please run as root user to enable systemd service');
+                                }
+                            } catch (e) {
+                                console.error('Error verifying ipfs-cluster-follow installation:', e);
+                                return false;
                             }
-                            else{
-                                console.log('Please run as root user to enable systemd service');
-                            }
-                        } catch (e) {
-                            console.error('Error verifying ipfs-cluster-follow installation:', e);
-                            return false;
-                        }
-                    }).catch((err) => {
-                        console.error('Error extracting file:', err);
+                        }).catch((err) => {
+                            console.error('Error extracting file:', err);
+                        });
                     });
+                }).on('error', (err) => {
+                    // Handle errors
+                    console.error('Error downloading file:', err);
+                    fs.unlink(dest);
                 });
-            }).on('error', (err) => {
-                // Handle errors
-                console.error('Error downloading file:', err);
-                fs.unlink(dest);
+            reject(err)
             });
         }
         return results
@@ -207,39 +216,42 @@ export class InstallIPFS {
     
         // Download and extract the tarball
         const file = fs.createWriteStream(tarPath);
-        https.get(url, (response) => {
-            response.pipe(file);
-            file.on('finish', () => {
-                file.close();
-                console.log('Download completed.');
-                tar.x({
-                    file: tarPath,
-                    C: tmpDir,
-                }).then(() => {
-                    console.log('Extraction completed.');
-                    const binPath = path.join(tmpDir, 'ipfs-cluster-ctl', 'ipfs-cluster-ctl');
-                    execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-ctl`);
-                    try {
-                        // Verify installation
-                        const version = execSync('ipfs-cluster-ctl --version').toString().trim();
-                        console.log(`Installed ipfs-cluster-ctl version: ${version}`);
-                        return true;
-                    } catch (e) {
-                        console.error('Error verifying ipfs-cluster-ctl installation:', e);
-                        return false;
-                    }
-                }).catch((err) => {
-                    console.error('Error extracting file:', err);
+        return new Promise((resolve, reject) => {
+            https.get(url, (response) => {
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close();
+                    console.log('Download completed.');
+                    tar.x({
+                        file: tarPath,
+                        C: tmpDir,
+                    }).then(() => {
+                        console.log('Extraction completed.');
+                        const binPath = path.join(tmpDir, 'ipfs-cluster-ctl', 'ipfs-cluster-ctl');
+                        execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-ctl`);
+                        try {
+                            // Verify installation
+                            const version = execSync('ipfs-cluster-ctl --version').toString().trim();
+                            console.log(`Installed ipfs-cluster-ctl version: ${version}`);
+                            resolve(true); // Resolve the promise here
+                        } catch (e) {
+                            console.error('Error verifying ipfs-cluster-ctl installation:', e);
+                            reject(e); // Reject the promise if there's an error
+                        }
+                    }).catch((err) => {
+                        console.error('Error extracting file:', err);
+                        reject(err); // Reject the promise if there's an error
+                    });
                 });
-            });
-        }).on('error', (err) => {
-            console.error('Error downloading file:', err);
-            fs.unlink(tarPath, (err) => {
-                if (err) console.error(`Error removing temporary tarball: ${err}`);
+            }).on('error', (err) => {
+                console.error('Error downloading file:', err);
+                fs.unlink(tarPath, () => { // Unlink regardless of whether there's an error
+                    reject(err); // Reject the promise if there's an error
+                });
             });
         });
     }
-
+    
     async installIPFSClusterService(options = {}) {
         try {
             const detect = execSync("which ipfs-cluster-service").toString().trim();
@@ -258,47 +270,51 @@ export class InstallIPFS {
     
         // Download and extract the tarball
         const file = fs.createWriteStream(tarPath);
-        https.get(url, (response) => {
-            response.pipe(file);
-            file.on('finish', () => {
-                file.close();
-                console.log('Download completed.');
-                tar.x({
-                    file: tarPath,
-                    C: tmpDir,
-                }).then(() => {
-                    console.log('Extraction completed.');
-                    const binPath = path.join(tmpDir, 'ipfs-cluster-service', 'ipfs-cluster-service');
-                    execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-service`);
-                    try {
-                        // Verify installation
-                        const version = execSync('ipfs-cluster-service --version').toString().trim();
-                        console.log(`Installed ipfs-cluster-service version: ${version}`);
-                        // if root user, write and enable systemd service
-                        if (os.userInfo().username == "root") {
-                            let serviceConfig = fs.readFileSync(path.join(thisDir, 'ipfs_clusterFollow.service')).toString();
-                            fs.writeFileSync('/etc/systemd/system/ipfs-cluster-follow.service', serviceConfig);
-                            execSync('systemctl enable ipfs-cluster-service');
-                            console.log('ipfs-cluster-service service enabled.');
-                            execSync('systemctl daemon-reload');
-                            console.log('systemctl daemon reloaded.');
+        return new Promise((resolve, reject) => {
+            https.get(url, (response) => {
+                response.pipe(file);
+                file.on('finish', () => {
+                    file.close();
+                    console.log('Download completed.');
+                    tar.x({
+                        file: tarPath,
+                        C: tmpDir,
+                    }).then(() => {
+                        console.log('Extraction completed.');
+                        const binPath = path.join(tmpDir, 'ipfs-cluster-service', 'ipfs-cluster-service');
+                        execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-service`);
+                        try {
+                            // Verify installation
+                            const version = execSync('ipfs-cluster-service --version').toString().trim();
+                            console.log(`Installed ipfs-cluster-service version: ${version}`);
+                            // if root user, write and enable systemd service
+                            if (os.userInfo().username == "root") {
+                                let serviceConfig = fs.readFileSync(path.join(thisDir, 'ipfs_clusterFollow.service')).toString();
+                                fs.writeFileSync('/etc/systemd/system/ipfs-cluster-follow.service', serviceConfig);
+                                execSync('systemctl enable ipfs-cluster-service');
+                                console.log('ipfs-cluster-service service enabled.');
+                                execSync('systemctl daemon-reload');
+                                console.log('systemctl daemon reloaded.');
+                            }
+                            else{
+                                console.log('Please run as root user to enable systemd service');
+                            }
+                            resolve(true); // Resolve the promise here
+                        } catch (e) {
+                            console.error('Error verifying ipfs-cluster-service installation:', e);
+                            reject(e); // Reject the promise if there's an error
                         }
-                        else{
-                            console.log('Please run as root user to enable systemd service');
-                        }    
-                        return true;
-                    } catch (e) {
-                        console.error('Error verifying ipfs-cluster-service installation:', e);
-                        return false;
-                    }
-                }).catch((err) => {
-                    console.error('Error extracting file:', err);
+                    }).catch((err) => {
+                        console.error('Error extracting file:', err);
+                        reject(err); // Reject the promise if there's an error
+                    });
                 });
-            });
-        }).on('error', (err) => {
-            console.error('Error downloading file:', err);
-            fs.unlink(tarPath, (err) => {
-                if (err) console.error(`Error removing temporary tarball: ${err}`);
+            }).on('error', (err) => {
+                console.error('Error downloading file:', err);
+                fs.unlink(tarPath, (err) => {
+                    if (err) console.error(`Error removing temporary tarball: ${err}`);
+                });
+                reject(err); // Reject the promise if there's an error
             });
         });
     }
@@ -320,55 +336,59 @@ export class InstallIPFS {
         const tarPath = path.join(tmpDir, 'ipget.tar.gz');
         const url = "https://dist.ipfs.tech/ipget/v0.10.0/ipget_v0.10.0_linux-amd64.tar.gz";
     
-        // Download the tarball
+       // Download the tarball
+    return new Promise((resolve, reject) => {
         https.get(url, (response) => {
             const fileStream = fs.createWriteStream(tarPath);
             response.pipe(fileStream);
             fileStream.on('finish', () => {
                 fileStream.close();
                 console.log('Downloaded ipget tarball.');
-    
+
                 // Extract the tarball
                 tar.x({
                     file: tarPath,
                     C: tmpDir,
                 }).then(() => {
                     console.log('Extracted ipget.');
-    
+
                     // Move to bin and install
                     if (os.userInfo().username == "root") {
                         const binPath = path.join(tmpDir, 'ipget', 'ipget');
                         execSync(`sudo mv ${binPath} /usr/local/bin/ipget`);
                         const installScriptPath = path.join(tmpDir, 'ipget', 'install.sh');
                         execSync(`cd ${tmpDir}/ipget && sudo bash install.sh`);
-        
+
                         // Update system settings
                         execSync('sudo sysctl -w net.core.rmem_max=2500000');
                         execSync('sudo sysctl -w net.core.wmem_max=2500000');    
                     }
                     else{
                         console.log('Please run as root user to install ipget');
-                        execSync(`cd ${tmpDir}/ipget && bash install.sh`);                        
+                        execSync(`cd ${tmpDir}/ipget && sudo bash install.sh`);      
                     }
-    
+
                     // Verify installation
                     try {
                         const version = execSync('ipget --version').toString().trim();
                         console.log(`Installed ipget version: ${version}`);
-                        return true;
+                        resolve(true); // Resolve the promise here
                     } catch (verificationError) {
                         console.error('Error verifying ipget installation:', verificationError);
-                        return false;
+                        reject(verificationError); // Reject the promise if there's an error
                     }
                 }).catch((extractionError) => {
                     console.error('Error extracting ipget:', extractionError);
+                    reject(extractionError); // Reject the promise if there's an error
                 });
             });
         }).on('error', (downloadError) => {
             console.error('Error downloading ipget:', downloadError);
+            reject(downloadError); // Reject the promise if there's an error
         });
-    }
-    
+    });
+}
+    // FIXME: This returns null 
     async configIPFSClusterService(options = {}) {
         let clusterName = options.clusterName || this.clusterName;
         let diskStats = options.diskStats || this.diskStats;
@@ -398,12 +418,14 @@ export class InstallIPFS {
                     const command0 = "systemctl enable ipfs-cluster-service";
                     const results0 = execSync(command0, { shell: true });
                     const initClusterDaemon = `IPFS_PATH=${ipfsPath} ipfs-cluster-service init -f`;
-                    initClusterDaemonResults = execSync(initClusterDaemonResults, { shell: true }).toString();
+                    initClusterDaemonResults = execSync(initClusterDaemon, { shell: true }).toString();
                 } else {
+                    // FIXME: Generating the config goes wrong here.
+                    //        error loading configurations: invalid character 'c' looking for beginning of object key string
+                    //        When re-running the ipfs-cluster-service init -f manually it works fine the config is generated correctly.
                     const initClusterDaemon = `IPFS_PATH=${ipfsPath} ipfs-cluster-service init -f`;
-                    initClusterDaemonResults = execSync(command1, { shell: true }).toString();
+                    initClusterDaemonResults = execSync(initClusterDaemon).toString();
                 }
-
                 results["initClusterDaemonResults"] = initClusterDaemonResults                
             }
             catch(e){
@@ -416,13 +438,13 @@ export class InstallIPFS {
                 let workerID = "worker-" + crypto.randomUUID();
                 serviceConfig = serviceConfig.replace('"cluster_name": "ipfs-cluster"', 'cluster_name": "'+clusterName+'"');
                 serviceConfig = serviceConfig.replace('"secret": "96d5952479d0a2f9fbf55076e5ee04802f15ae5452b5faafc98e2bd48cf564d3"', '"secret": "'+ secret +'"');
-                fs.writeFileSync(path.join(followPath, 'service.json'), serviceConfig);
+                fs.writeFileSync(path.join(servicePath, 'service.json'), serviceConfig);
                 let peerStore = fs.readFileSync(path.join(thisDir, 'peerstore')).toString();
-                fs.writeFileSync(path.join(followPath, 'peerstore'), peerStore);
+                fs.writeFileSync(path.join(servicePath, 'peerstore'), peerStore);
 
                 let pebbleLink = path.join(servicePath, "pebble");
                 let pebbleDir = path.join(clusterPath, "pebble");
-                if (clusterPath != followPath) {
+                if (clusterPath != servicePath) {
                     if (fs.existsSync(pebbleLink)) {
                         fs.unlinkSync(pebbleLink);
                     }
@@ -483,13 +505,27 @@ export class InstallIPFS {
         return results;
     }
 
+    // FIXME: This is not working
     async configIPFSClusterCtl(options = {}) {
         let results = {};
-        let run_daemon_cmd = "ipfs-cluster-ctl status";
-        run_daemon = execSync(run_daemon_cmd).toString();
+        let run_daemon_cmd = "ipfs-cluster-ctl status";        
+        let run_daemon;
 
-        findDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | wc -l";
-        findDaemonResuls = execSync(findDaemon).toString();
+        // Catching error here i can always return an exception to escape back to installAndConfigure.
+        try {
+            // FIXME: This throws an error but i'm not sure if this is due to an install error or if i'm missing the peers etc.
+            run_daemon = execSync(run_daemon_cmd).toString();
+        } catch (error) {
+            run_daemon = error.stderr.toString();
+        }
+        
+        // FIXME: ipfs-cluster-service daemon is never started so this will always fail 
+        //        I need to start the daemon before i can run the ipfs-cluster-service ps command
+        //        ipfs-cluster-service daemon fails to start because of an invalid config file.
+        let runIPFSClusterService = "ipfs-cluster-service daemon";
+        let clusterServiceDaemon = execSync(runIPFSClusterService).toString();
+        let findDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | wc -l";
+        let findDaemonResuls = execSync(findDaemon).toString();
 
         if (parseInt(findDaemonResuls) == 0) {
             console.log("ipfs-cluster-service daemon is not running");
@@ -1004,11 +1040,27 @@ export class InstallIPFS {
         }
     }
 
+    async removeBinariesSync(binPath, binaries) {
+        // Recursive removal using rmSync in newer Node.js versions, for older versions consider rimraf package
+        try {
+            for (const binary of binaries) {
+                const filePath = path.join(binPath, binary);
+                fs.rmSync(filePath, { force: true });
+            }
+            return true;
+        } catch (error) {
+            console.error(`Failed to remove binaries: ${error}`);
+            return false;
+        }
+    }
+
+    // TODO: Implement the uninstall methods for testing
     async uninstallIPFS(options = {}) {
         await this.killProcessByPattern('ipfs.*daemon');
         await this.killProcessByPattern('ipfs-cluster-follow');
         await this.removeDirectorySync(this.ipfsPath);
         await this.removeDirectorySync(path.join(os.homedir(), '.ipfs-cluster-follow', 'ipfs_cluster', 'api-socket'));
+        await this.removeBinariesSync('/usr/local/bin', ['ipfs', 'ipget', 'ipfs-cluster-service', 'ipfs-cluster-ctl']);
         return true;
     }
 
@@ -1123,14 +1175,15 @@ export class InstallIPFS {
                 //await this.runIPFSDaemon();
             }
             if (this.role === 'master') {
-                const clusterService = this.installIPFSClusterService(options);
-                const clusterCtl = this.installIPFSClusterCtl(options);
+                const clusterService = await this.installIPFSClusterService(options);
+                // This fails with which ipfs-cluster-service doesn't seem to install anything
+                const clusterCtl = await this.installIPFSClusterCtl(options);
                 const clusterServiceConfig = await this.configIPFSClusterService(options);
-                const clusterCtlConfig = await this.configIPFSClusterCtl(options);
+                const clusterCtlConfig = await this.configIPFSClusterCtl(options);  
                 results.clusterService = clusterService;
                 results.clusterCtl = clusterCtl;
                 results.clusterServiceConfig = clusterServiceConfig;
-                results.clusterCtlConfig = clusterCtlConfig;
+                results.clusterCtlConfig = clusterCtlConfig; 
                 //await this.runIPFSClusterService(options);
             }
             if (this.role === 'worker') {
@@ -1168,17 +1221,33 @@ async function main(){
     // Initialize the IPFS configuration manager with the provided metadata
     const install_ipfs = new InstallIPFS(undefined, meta);
 
-    // Execute the installation and configuration process
-    async function runInstallationAndConfiguration() {
-        try {
-            const results = await install_ipfs.installAndConfigure();
-            console.log('Installation and Configuration Results:', results);
-        } catch (error) {
-            console.error('An error occurred during the installation and configuration process:', error);
-        }
-    }
+    const setup = true;
 
-    await runInstallationAndConfiguration();
+    if (setup) {
+        // Execute the installation and configuration process
+        async function runInstallationAndConfiguration() {
+            try {
+                const results = await install_ipfs.installAndConfigure();
+                console.log('Installation and Configuration Results:', results);
+            } catch (error) {
+                console.error('An error occurred during the installation and configuration process:', error);
+            }
+            
+        }
+        await runInstallationAndConfiguration();
+    }else{
+        async function runUninstall() {
+            try {
+                const results = await install_ipfs.testUninstall();
+                console.log('Installation and Configuration Results:', results);
+            } catch (error) {
+                console.error('An error occurred during the installation and configuration process:', error);
+            }
+        }
+        
+        await runUninstall();
+    }
+    
 }
 
 main();
