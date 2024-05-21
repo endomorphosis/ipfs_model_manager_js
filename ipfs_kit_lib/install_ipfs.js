@@ -25,6 +25,9 @@ export class InstallIPFS {
         this.thisDir = path.dirname(new URL(import.meta.url).pathname);
         this.ipfsTestInstall = this.ipfsTestInstall.bind(this);
         this.env = process.env;
+        this.path = process.env.PATH;
+        this.path = this.path + ":" + path.join(this.thisDir, "bin");
+        this.pathString = `PATH=${this.path} `;
         this.ipfs_dist_tar = "https://dist.ipfs.tech/kubo/v0.26.0/kubo_v0.26.0_linux-amd64.tar.gz";
         this.ipfs_follow_dist_tar = "https://dist.ipfs.tech/ipfs-cluster-follow/v1.0.8/ipfs-cluster-follow_v1.0.8_linux-amd64.tar.gz";
         this.ipfs_cluster_dist_tar = "https://dist.ipfs.tech/ipfs-cluster-ctl/v1.0.8/ipfs-cluster-ctl_v1.0.8_linux-amd64.tar.gz";
@@ -201,7 +204,7 @@ export class InstallIPFS {
     
     async installIPFSClusterCtl(options = {}) {
         try {
-            const detect = execSync("which ipfs-cluster-ctl").toString().trim();
+            const detect = execSync(this.pathString + "which ipfs-cluster-ctl").toString().trim();
             if (detect) {
                 console.log('ipfs-cluster-ctl is already installed.');
                 return true;
@@ -228,10 +231,14 @@ export class InstallIPFS {
                     }).then(() => {
                         console.log('Extraction completed.');
                         const binPath = path.join(tmpDir, 'ipfs-cluster-ctl', 'ipfs-cluster-ctl');
-                        execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-ctl`);
+                        if (os.userInfo().username == "root") {
+                            execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-ctl`);
+                        } else {
+                            execSync(`mv ${binPath} `+ this.thisDir  + `/bin/ipfs-cluster-ctl`);
+                        }
                         try {
                             // Verify installation
-                            const version = execSync('ipfs-cluster-ctl --version').toString().trim();
+                            const version = execSync(this.pathString + 'ipfs-cluster-ctl --version').toString().trim();
                             console.log(`Installed ipfs-cluster-ctl version: ${version}`);
                             resolve(true); // Resolve the promise here
                         } catch (e) {
@@ -254,7 +261,7 @@ export class InstallIPFS {
     
     async installIPFSClusterService(options = {}) {
         try {
-            const detect = execSync("which ipfs-cluster-service").toString().trim();
+            const detect = execSync(this.pathString + "which ipfs-cluster-service").toString().trim();
             if (detect) {
                 console.log('ipfs-cluster-service is already installed.');
                 return true;
@@ -282,10 +289,14 @@ export class InstallIPFS {
                     }).then(() => {
                         console.log('Extraction completed.');
                         const binPath = path.join(tmpDir, 'ipfs-cluster-service', 'ipfs-cluster-service');
-                        execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-service`);
+                        if(os.userInfo().username == "root") {
+                            execSync(`sudo mv ${binPath} /usr/local/bin/ipfs-cluster-service`);
+                        } else {
+                            execSync(`mv ${binPath} `+ this.thisDir  + `/bin/ipfs-cluster-service`);
+                        }
                         try {
                             // Verify installation
-                            const version = execSync('ipfs-cluster-service --version').toString().trim();
+                            const version = execSync(this.pathString + 'ipfs-cluster-service --version').toString().trim();
                             console.log(`Installed ipfs-cluster-service version: ${version}`);
                             // if root user, write and enable systemd service
                             if (os.userInfo().username == "root") {
@@ -298,6 +309,8 @@ export class InstallIPFS {
                             }
                             else{
                                 console.log('Please run as root user to enable systemd service');
+                                let tmpCommand2 = `cd ${tmpDir}/ipfs-cluster-service && cp ipfs-cluster-service `+ this.thisDir  + `/bin/ipfs-cluster-service && chmod +x `+ this.thisDir  + `/bin/ipfs-cluster-service`;
+                                execSync(tmpCommand2);
                             }
                             resolve(true); // Resolve the promise here
                         } catch (e) {
@@ -322,7 +335,7 @@ export class InstallIPFS {
     async installIPGet(options = {}) {
         try {
             // Check if ipget is already installed
-            const detect = execSync("which ipget").toString().trim();
+            const detect = execSync(this.pathString + " which ipget").toString().trim();
             if (detect) {
                 //console.log('ipget is already installed.');
                 return true;
@@ -364,13 +377,17 @@ export class InstallIPFS {
                         execSync('sudo sysctl -w net.core.wmem_max=2500000');    
                     }
                     else{
-                        console.log('Please run as root user to install ipget');
-                        execSync(`cd ${tmpDir}/ipget && sudo bash install.sh`);      
+                        console.log('Please run as root user to install ipget globally');
+                        let tmpCommand = `cd ${tmpDir}/ipget && bash install.sh`;
+                        let tmpCommand2 = `cd ${tmpDir}/ipget && cp ipget `+ this.thisDir  + `/bin/ipget && chmod +x `+ this.thisDir  + `/bin/ipget`;
+                        execSync(tmpCommand);
+                        execSync(tmpCommand2);
+                        // execSync(`cd ${tmpDir}/ipget && bash install.sh`);      
                     }
 
                     // Verify installation
                     try {
-                        const version = execSync('ipget --version').toString().trim();
+                        const version = execSync(this.pathString + ' ipget --version').toString().trim();
                         console.log(`Installed ipget version: ${version}`);
                         resolve(true); // Resolve the promise here
                     } catch (verificationError) {
@@ -424,7 +441,7 @@ export class InstallIPFS {
                     //        error loading configurations: invalid character 'c' looking for beginning of object key string
                     //        When re-running the ipfs-cluster-service init -f manually it works fine the config is generated correctly.
                     const initClusterDaemon = `IPFS_PATH=${ipfsPath} ipfs-cluster-service init -f`;
-                    initClusterDaemonResults = execSync(initClusterDaemon).toString();
+                    initClusterDaemonResults = execSync(this.pathString + initClusterDaemon).toString();
                 }
                 results["initClusterDaemonResults"] = initClusterDaemonResults                
             }
@@ -523,7 +540,7 @@ export class InstallIPFS {
         //        I need to start the daemon before i can run the ipfs-cluster-service ps command
         //        ipfs-cluster-service daemon fails to start because of an invalid config file.
         let runIPFSClusterService = "ipfs-cluster-service daemon";
-        let clusterServiceDaemon = execSync(runIPFSClusterService).toString();
+        let clusterServiceDaemon = execSync(this.pathString + runIPFSClusterService).toString();
         let findDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | wc -l";
         let findDaemonResuls = execSync(findDaemon).toString();
 
@@ -811,8 +828,6 @@ export class InstallIPFS {
                 execSync("ps -ef | grep ipfs | grep daemon | grep -v grep | awk '{print $2}' | xargs kill -9");
                 findDaemonResuls = execSync(findDaemon).toString();
             }
-
-            console.warn('You need to be root to write to /etc/systemd/system/ipfs.service');
             let run_daemon_cmd = `IPFS_PATH=${ipfsPath} ipfs daemon --enable-pubsub-experiment --enable-gc`;
             run_daemon = exec(
                 run_daemon_cmd,
@@ -1167,8 +1182,8 @@ export class InstallIPFS {
         try {
             if (['leecher', 'worker', 'master'].includes(this.role)) {
                 // Assuming these methods are implemented and properly handle async operations
-                this.installIPGet();
-                this.installIPFSDaemon();
+                const installIPGetResults = this.installIPGet();
+                const installIPFSResults = this.installIPFSDaemon();
                 const ipfsConfig =  await this.configIPFS(options)
                 results.ipfs = true; // Assuming installation success
                 results.ipfs_config = ipfsConfig;
