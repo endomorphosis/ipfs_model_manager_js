@@ -535,12 +535,6 @@ export class InstallIPFS {
         let run_daemon;
         let findDaemonResuls = 0;
         // Catching error here i can always return an exception to escape back to installAndConfigure.
-        try {
-            // FIXME: This throws an error but i'm not sure if this is due to an install error or if i'm missing the peers etc.
-            run_daemon = execSync(run_daemon_cmd).toString();
-        } catch (error) {
-            run_daemon = error.stderr.toString();
-        }
         
         // FIXME: ipfs-cluster-service daemon is never started so this will always fail 
         //        I need to start the daemon before i can run the ipfs-cluster-service ps command
@@ -549,42 +543,59 @@ export class InstallIPFS {
         console.log("Starting ipfs-cluster-service daemon");
         console.log(runIPFSClusterService);
 
-        // TODO : This is not working, replace with spawn or exec and the pinsets
         try{
-            let clusterServiceDaemon = execSync( runIPFSClusterService, { timeout: 5000 }).toString();
+            let clusterServiceDaemonOutput = '';
+            let clusterServiceDaemon = exec(runIPFSClusterService,
+                (error, stdout, stderr) => {
+                    if (error) {
+                        //console.log(error);
+                    }
+                    if (stderr) {
+                        //console.log(stderr);
+                    }
+                    if(stdout){
+                        clusterServiceDaemonOutput = clusterServiceDaemonOutput + stdout;
+                        //console.log(stdout);
+                    }
+                }
+            );
+            await new Promise(resolve => setTimeout(resolve, 1000));
             let findDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | wc -l";
-            let findDaemonResuls = execSync(findDaemon).toString();
+            findDaemonResuls = execSync(findDaemon).toString();
         }
         catch(e){
             console.log("Error starting ipfs-cluster-service daemon");
             console.log(e);
-            if (e.code == "ETIMEDOUT" || e.errno == 'ETIMEDOUT') {
-                console.log("Timeout error");
-            }else if (e.code == "ENOBUFS" || e.errno == -105) {
-                console.log("ENOBUFS error");
-            }
-            else{
-                throw new Error("Error starting ipfs-cluster-service daemon");
-            }
         }
-        finally{
-            findDaemonResuls = 1
+
+
+
+        try {
+            // FIXME: This throws an error but i'm not sure if this is due to an install error or if i'm missing the peers etc.
+            run_daemon = execSync(run_daemon_cmd).toString();
+        } catch (error) {
+            run_daemon = error.stderr.toString();
         }
+
 
         if (parseInt(findDaemonResuls) == 0) {
             console.log("ipfs-cluster-service daemon is not running");
             throw new Error("ipfs-cluster-service daemon is not running");
         }
         else{
-            
             //let killDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | awk '{print $2}' | xargs kill -9";
             let psDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | awk '{print $2}'";         
-            let psDaemonResults = execSync(psDaemon);
-            if (psDaemonResults.length > 0) {
-                let killDaemon = "kill -9 " + psDaemonResults;
-                let killDaemonResults = execSync(killDaemon);
+            let psDaemonResults = execSync(psDaemon).toString().split("\n");
+            while (psDaemonResults.length > 0 && psDaemonResults[0] != "") {
+                psDaemonResults = execSync(psDaemon).toString().split("\n");
+                let killProcess = "kill -9 " + psDaemonResults[0];
+                if (psDaemonResults[0] != "") {
+                    let killDaemonResults = execSync(killProcess);
+                }
+                psDaemonResults = execSync(psDaemon).toString().split("\n");
             }
         }
+
 
         results["run_daemon"] = run_daemon;
 
