@@ -442,6 +442,8 @@ export class InstallIPFS {
                     //        When re-running the ipfs-cluster-service init -f manually it works fine the config is generated correctly.
                     const initClusterDaemon = `IPFS_PATH=${ipfsPath} ipfs-cluster-service init -f`;
                     initClusterDaemonResults = execSync(this.pathString + initClusterDaemon).toString();
+                    const configClusterDaemon = `cp ${this.thisDir}/service.json ${servicePath}/service.json`;
+                    const configClusterDaemonResults = execSync(configClusterDaemon).toString();
                 }
                 results["initClusterDaemonResults"] = initClusterDaemonResults                
             }
@@ -449,74 +451,78 @@ export class InstallIPFS {
                 console.error(e);
                 throw new Error("Error configuring IPFS Cluster Service");
             }
+            if(this.role == "worker"){        
+                try{
+                    let serviceConfig = fs.readFileSync(path.join(this.thisDir, 'service.json')).toString();
+                    let workerID = "worker-" + crypto.randomUUID();
+                    serviceConfig = serviceConfig.replace('"cluster_name": "ipfs-cluster"', 'cluster_name": "'+clusterName+'"');
+                    serviceConfig = serviceConfig.replace('"secret": "96d5952479d0a2f9fbf55076e5ee04802f15ae5452b5faafc98e2bd48cf564d3"', '"secret": "'+ secret +'"');
+                    fs.writeFileSync(path.join(servicePath, 'service.json'), serviceConfig);
+                    let peerStore = fs.readFileSync(path.join(thisDir, 'peerstore')).toString();
+                    fs.writeFileSync(path.join(servicePath, 'peerstore'), peerStore);
 
-            try{
-                let serviceConfig = fs.readFileSync(path.join(thisDir, 'service.json')).toString();
-                let workerID = "worker-" + crypto.randomUUID();
-                serviceConfig = serviceConfig.replace('"cluster_name": "ipfs-cluster"', 'cluster_name": "'+clusterName+'"');
-                serviceConfig = serviceConfig.replace('"secret": "96d5952479d0a2f9fbf55076e5ee04802f15ae5452b5faafc98e2bd48cf564d3"', '"secret": "'+ secret +'"');
-                fs.writeFileSync(path.join(servicePath, 'service.json'), serviceConfig);
-                let peerStore = fs.readFileSync(path.join(thisDir, 'peerstore')).toString();
-                fs.writeFileSync(path.join(servicePath, 'peerstore'), peerStore);
-
-                let pebbleLink = path.join(servicePath, "pebble");
-                let pebbleDir = path.join(clusterPath, "pebble");
-                if (clusterPath != servicePath) {
-                    if (fs.existsSync(pebbleLink)) {
-                        fs.unlinkSync(pebbleLink);
-                    }
-                    if (!fs.existsSync(pebbleDir)) {
-                        fs.mkdirSync(pebbleDir, { recursive: true });
-                    }
-                    fs.symlinkSync(pebbleDir, pebbleLink);
-                }
-
-                if (os.userInfo().username == "root") {
-                    let serviceFile = fs.readFileSync(path.join(thisDir, 'ipfs_cluster.service')).toString();
-                    fs.writeFileSync("/etc/systemd/system/ipfs-cluster-service.service", new_service)
-                    execSync("systemctl enable ipfs-cluster-service");
-                    execSync("systemctl daemon-reload");
-                }
-
-            }
-            catch(e){
-                console.error(e);
-                throw new Error("Error configuring IPFS Cluster Service");
-            }
-
-            try{
-                let run_daemon_results
-                if (os.userInfo().username == "root") {
-                    let reloadDaemon = "systemctl daemon-reload";
-                    let reloadDaemonResults = execSync(reloadDaemon);
-
-                    // Enable service 
-                    let enableDaemon = "systemctl enable ipfs-cluster-service";
-                    let enableDaemonResults = execSync(enableDaemon);
-
-                    // Start daemon
-                    let startDaemon = "systemctl start ipfs-cluster-service";
-                    let startDaemonResults = execSync(startDaemon);
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    run_daemon = execSync("systemctl status ipfs-cluster-service | grep Active | awk '{print $2}'").toString();
-                }
-                else{
-                    let run_daemon_cmd = "ipfs-cluster-service daemon";
-                    run_daemon = exec(
-                        run_daemon_cmd,
-                        (error, stdout, stderr) => {
-                            console.log(stdout);
+                    let pebbleLink = path.join(servicePath, "pebble");
+                    let pebbleDir = path.join(clusterPath, "pebble");
+                    if (clusterPath != servicePath) {
+                        if (fs.existsSync(pebbleLink)) {
+                            fs.unlinkSync(pebbleLink);
                         }
-                    );
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    run_daemon = run_daemon.stderr.read();
+                        if (!fs.existsSync(pebbleDir)) {
+                            fs.mkdirSync(pebbleDir, { recursive: true });
+                        }
+                        fs.symlinkSync(pebbleDir, pebbleLink);
+                    }
+
+                    if (os.userInfo().username == "root") {
+                        let serviceFile = fs.readFileSync(path.join(thisDir, 'ipfs_cluster.service')).toString();
+                        fs.writeFileSync("/etc/systemd/system/ipfs-cluster-service.service", new_service)
+                        execSync("systemctl enable ipfs-cluster-service");
+                        execSync("systemctl daemon-reload");
+                    }
+
                 }
-                // Check if daemon is running
-                results["run_daemon"] = run_daemon;
+                catch(e){
+                    console.error(e);
+                    throw new Error("Error configuring IPFS Cluster Service");
+                }
             }
-            catch(e){
-                console.log(e);
-                return e.toString();
+            else{
+                
+                try{
+                    let run_daemon_results
+                    if (os.userInfo().username == "root") {
+                        let reloadDaemon = "systemctl daemon-reload";
+                        let reloadDaemonResults = execSync(reloadDaemon);
+
+                        // Enable service 
+                        let enableDaemon = "systemctl enable ipfs-cluster-service";
+                        let enableDaemonResults = execSync(enableDaemon);
+
+                        // Start daemon
+                        let startDaemon = "systemctl start ipfs-cluster-service";
+                        let startDaemonResults = execSync(startDaemon);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        run_daemon = execSync("systemctl status ipfs-cluster-service | grep Active | awk '{print $2}'").toString();
+                    }
+                    else{
+                        let run_daemon_cmd = "ipfs-cluster-service daemon";
+                        run_daemon = exec(
+                            run_daemon_cmd,
+                            (error, stdout, stderr) => {
+                                console.log(stdout);
+                            }
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        run_daemon = run_daemon.stderr.read();
+                    }
+                    // Check if daemon is running
+                    results["run_daemon"] = run_daemon;
+                }
+                catch(e){
+                    console.log(e);
+                    return e.toString();
+                }
+  
             }
         }
         return results;
@@ -527,7 +533,7 @@ export class InstallIPFS {
         let results = {};
         let run_daemon_cmd = "ipfs-cluster-ctl status";        
         let run_daemon;
-
+        let findDaemonResuls = 0;
         // Catching error here i can always return an exception to escape back to installAndConfigure.
         try {
             // FIXME: This throws an error but i'm not sure if this is due to an install error or if i'm missing the peers etc.
@@ -539,18 +545,45 @@ export class InstallIPFS {
         // FIXME: ipfs-cluster-service daemon is never started so this will always fail 
         //        I need to start the daemon before i can run the ipfs-cluster-service ps command
         //        ipfs-cluster-service daemon fails to start because of an invalid config file.
-        let runIPFSClusterService = "ipfs-cluster-service daemon";
-        let clusterServiceDaemon = execSync(this.pathString + runIPFSClusterService).toString();
-        let findDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | wc -l";
-        let findDaemonResuls = execSync(findDaemon).toString();
+        let runIPFSClusterService = this.pathString + "ipfs-cluster-service daemon";
+        console.log("Starting ipfs-cluster-service daemon");
+        console.log(runIPFSClusterService);
+
+        // TODO : This is not working, replace with spawn or exec and the pinsets
+        try{
+            let clusterServiceDaemon = execSync( runIPFSClusterService, { timeout: 5000 }).toString();
+            let findDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | wc -l";
+            let findDaemonResuls = execSync(findDaemon).toString();
+        }
+        catch(e){
+            console.log("Error starting ipfs-cluster-service daemon");
+            console.log(e);
+            if (e.code == "ETIMEDOUT" || e.errno == 'ETIMEDOUT') {
+                console.log("Timeout error");
+            }else if (e.code == "ENOBUFS" || e.errno == -105) {
+                console.log("ENOBUFS error");
+            }
+            else{
+                throw new Error("Error starting ipfs-cluster-service daemon");
+            }
+        }
+        finally{
+            findDaemonResuls = 1
+        }
 
         if (parseInt(findDaemonResuls) == 0) {
             console.log("ipfs-cluster-service daemon is not running");
             throw new Error("ipfs-cluster-service daemon is not running");
         }
         else{
-            let killDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | awk '{print $2}' | xargs kill -9";
-            let killDaemonResults = execSync(killDaemon);
+            
+            //let killDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | awk '{print $2}' | xargs kill -9";
+            let psDaemon = "ps -ef | grep ipfs-cluster-service | grep -v grep | awk '{print $2}'";         
+            let psDaemonResults = execSync(psDaemon);
+            if (psDaemonResults.length > 0) {
+                let killDaemon = "kill -9 " + psDaemonResults;
+                let killDaemonResults = execSync(killDaemon);
+            }
         }
 
         results["run_daemon"] = run_daemon;
