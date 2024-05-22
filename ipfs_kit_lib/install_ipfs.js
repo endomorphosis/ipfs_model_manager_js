@@ -510,7 +510,7 @@ export class InstallIPFS {
                         run_daemon = exec(
                             run_daemon_cmd,
                             (error, stdout, stderr) => {
-                                console.log(stdout);
+                                //console.log(stdout);
                             }
                         );
                         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -581,8 +581,8 @@ export class InstallIPFS {
             }
         }
         finally{
-            console.log("run_cluster_ctl")
-            console.log(run_cluster_ctl)
+            // console.log("run_cluster_ctl")
+            // console.log(run_cluster_ctl)
         }
 
         if (parseInt(findDaemonResuls) == 0) {
@@ -1293,13 +1293,19 @@ async function main(){
         async function runInstallationAndConfiguration() {
             try {
                 const results = await install_ipfs.installAndConfigure();
-                console.log('Installation and Configuration Results:', results);
+                console.log('Installation and Configuration Results:')
+                console.log(results);
+                return results;
             } catch (error) {
                 console.error('An error occurred during the installation and configuration process:', error);
+                return false;
             }
-            return true;
+            finally{
+                return true;
+            }
         }
-        await runInstallationAndConfiguration();
+
+        return await runInstallationAndConfiguration();
     }else{
         async function runUninstall() {
             try {
@@ -1310,9 +1316,10 @@ async function main(){
             }
         }
         
-        await runUninstall();
+        return await runUninstall();
     }
-    
+    return true;
 }
 
-main();
+await main();
+process.exit(0);
