@@ -26,7 +26,7 @@
 		"prompt-sync-history": "^1.0.1",
 		"shutil": "^0.0.1",
 		"subprocess": "^0.3.0",
-		"sync-request": "6.1.0"
+		"sync-request": "6.1.0",
+		"tar": "^7.1.0"
 	}
 }
-
