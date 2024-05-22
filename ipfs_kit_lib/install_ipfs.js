@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 import crypto from 'crypto';
 import https from 'https';
 import * as tar from 'tar';
+import { time } from 'console';
 
 // TODO: This fails if aria2c is not installed but doesn't fail gracefully and in a way that diagnoses the problem to the user 
 //       Either add a check for aria2c and report to user or add aria2c to the install that is ran before hand
@@ -531,17 +532,12 @@ export class InstallIPFS {
     // FIXME: This is not working
     async configIPFSClusterCtl(options = {}) {
         let results = {};
-        let run_daemon_cmd = "ipfs-cluster-ctl status";        
         let run_daemon;
+        let run_cluster_ctl;
         let findDaemonResuls = 0;
-        // Catching error here i can always return an exception to escape back to installAndConfigure.
-        
-        // FIXME: ipfs-cluster-service daemon is never started so this will always fail 
-        //        I need to start the daemon before i can run the ipfs-cluster-service ps command
-        //        ipfs-cluster-service daemon fails to start because of an invalid config file.
         let runIPFSClusterService = this.pathString + "ipfs-cluster-service daemon";
         console.log("Starting ipfs-cluster-service daemon");
-        console.log(runIPFSClusterService);
+        // console.log(runIPFSClusterService);
 
         try{
             let clusterServiceDaemonOutput = '';
@@ -567,16 +563,27 @@ export class InstallIPFS {
             console.log("Error starting ipfs-cluster-service daemon");
             console.log(e);
         }
-
-
-
+        run_daemon = findDaemonResuls;
         try {
             // FIXME: This throws an error but i'm not sure if this is due to an install error or if i'm missing the peers etc.
-            run_daemon = execSync(run_daemon_cmd).toString();
+            let run_cluster_ctl_cmd =  this.pathString + "ipfs-cluster-ctl peers ls";       
+            run_cluster_ctl = execSync(run_cluster_ctl_cmd, { timeout: 5000 }).toString();
+            console.log(run_cluster_ctl)
         } catch (error) {
-            run_daemon = error.stderr.toString();
+            if (error.code == 'ETIMEDOUT') {
+                console.log("ipfs-cluster-ctl command timed out but did not fail");
+                run_cluster_ctl = true;
+            }
+            else{
+                console.log("ipfs-cluster-ctl command failed");
+                console.log(error);
+                run_cluster_ctl = error.stderr.toString();
+            }
         }
-
+        finally{
+            console.log("run_cluster_ctl")
+            console.log(run_cluster_ctl)
+        }
 
         if (parseInt(findDaemonResuls) == 0) {
             console.log("ipfs-cluster-service daemon is not running");
@@ -595,10 +602,9 @@ export class InstallIPFS {
                 psDaemonResults = execSync(psDaemon).toString().split("\n");
             }
         }
-
-
+        run_daemon = findDaemonResuls;
         results["run_daemon"] = run_daemon;
-
+        results["run_cluster_ctl"] = run_cluster_ctl;
         return results;
     }
 
@@ -1291,7 +1297,7 @@ async function main(){
             } catch (error) {
                 console.error('An error occurred during the installation and configuration process:', error);
             }
-            
+            return true;
         }
         await runInstallationAndConfiguration();
     }else{
