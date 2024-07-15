@@ -29,7 +29,7 @@ const tmpFile = new temp_file.TempFileManager()
 
 class ModelManager {
     constructor(resources = null, meta = null) {
-        let localPatAnonh
+        
         this.models = {
             "s3_models": [],
             "ipfs_models": [],
