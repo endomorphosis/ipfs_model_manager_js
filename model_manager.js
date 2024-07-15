@@ -32,9 +32,9 @@ class ModelManager {
         let localPatAnonh
         this.models = {
             "s3_models": [],
-            "ipfsModels": [],
+            "ipfs_models": [],
             "local_models": [],
-            "httpsModels": []
+            "https_models": []
         };
         this.lshttpsModels = this.lshttpsModels.bind(this);
         this.lsIpfsModels = this.lsIpfsModels.bind(this);
@@ -1334,19 +1334,19 @@ class ModelManager {
                 this.models["s3_models"] = this.lsS3Models();
             } else if (src === "ipfs") {
                 this.ipfsPinset = this.ipfsKit.ipfsGetPinset();
-                this.models["ipfsModels"] = this.lsIpfsModels();
+                this.models["ipfs_models"] = this.lsIpfsModels();
             } else if (src === "local") {
                 this.models["local_models"] = this.lsLocalModels();
             } else if (src === "https") {
-                this.models["httpsModels"] = this.lshttpsModels();
+                this.models["https_models"] = this.lshttpsModels();
             }
         } else {
             if (this.lastUpdate < tenDaysAgo) {
                 this.loadCollection();
                 this.models["s3_models"] = this.lsS3Models();
-                this.models["ipfsModels"] = this.lsIpfsModels();
+                this.models["ipfs_models"] = this.lsIpfsModels();
                 this.models["local_models"] = this.lsLocalModels();
-                this.models["httpsModels"] = this.lshttpsModels();
+                this.models["https_models"] = this.lshttpsModels();
                 this.ipfsPinset = this.ipfsKit.ipfsGetPinset();
                 this.lastUpdate = timestamp;
             }
@@ -1356,13 +1356,13 @@ class ModelManager {
             this.models["s3_models"] = this.models["s3Models"];
             delete this.models["s3Models"];
         }
-        if (this.models.hasOwnProperty("ipfsModels")) {
-            this.models["ipfsModels"] = this.models["ipfsModels"];
-            delete this.models["ipfsModels"];
+        if (this.models.hasOwnProperty("ipfs_models")) {
+            this.models["ipfs_models"] = this.models["ipfs_models"];
+            delete this.models["ipfs_models"];
         }
-        if (this.models.hasOwnProperty("httpsModels")) {
-            this.models["httpsModels"] = this.models["httpsModels"];
-            delete this.models["httpsModels"];
+        if (this.models.hasOwnProperty("https_models")) {
+            this.models["https_models"] = this.models["https_models"];
+            delete this.models["https_models"];
         }
         if (this.models.hasOwnProperty("localModels")) {
             this.models["local_models"] = this.models["localModels"];
@@ -1472,9 +1472,9 @@ class ModelManager {
     
         const results = {
             "s3_models": this.models["s3_models"],
-            "ipfsModels": this.models["ipfsModels"],
+            "ipfs_models": this.models["ipfs_models"],
             "local_models": this.models["local_models"],
-            "httpsModels": this.models["httpsModels"]
+            "https_models": this.models["https_models"]
         };
     
         return results;
