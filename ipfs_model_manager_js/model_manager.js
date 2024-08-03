@@ -4,6 +4,7 @@ import path from 'path';
 import util from 'util';
 import { promisify } from 'util';
 import { exec } from 'child_process';
+import { ipfs_kit_js } from 'ipfs_kit_js';
 //from './s3_kit.js' import S3Kit;
 //import AWS from 'aws-sdk';
 //import { S3 } from 'aws-sdk';

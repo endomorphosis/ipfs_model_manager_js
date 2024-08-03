@@ -9,49 +9,12 @@ import request from 'sync-request'
 import {createClient, createUploadStream} from './s3.js'
 import process from 'process'
 
-export function open_ended_question(question){
-
-    let prompt = prompt_sync(({
-        history: prompt_sync_history(),
-        autocomplete: complete([]),
-        sigint: true
-    }))
-
-    let answer = prompt(question)
-
-    console.log("confirm answer: " + answer)
-    let confirm = prompt("Confirm? (y/n): ")
-    if (confirm != 'y' && confirm != 'Y'){
-        answer = open_ended_question(question)
-    }
-
-    return answer
-}
-
 export function prepare_source(generate){
 
 }
 
 export function extract_source(generate){
 
-}
-
-export function multiple_select_question(question,choices){
-    let tmp_choices = choices
-    let done = false
-    let selections = []
-    let selection = multiple_choice_question(question, tmp_choices)
-    while(!done){
-        if (selection == 'None' || selection == '' || selection == null){
-            done = true
-        }
-        else{
-            selections.push(selection)
-            tmp_choices = tmp_choices.filter(function(value, index, arr){ return value != selection;})
-            selection = multiple_choice_question(question, tmp_choices)
-        }
-    }
-    return selections
 }
 
 export function folder_data(generate, manifest, build_path){
@@ -90,46 +53,6 @@ export function folder_data(generate, manifest, build_path){
     return  fileDict   
 }
 
-export function multiple_choice_question(question, choices){
-
-    let prompt = prompt_sync(({
-        history: prompt_sync_history(),
-        autocomplete: complete(choices),
-        sigint: true
-    }))
-
-    let new_choices = []
-    new_choices.push("None")
-    for (var choice in choices){
-        new_choices.push(choices[choice])
-    }
-
-    let index = 0
-    console.log(question)
-
-    for( var choice in new_choices){
-        console.log(index + ". " + new_choices[choice])
-        index += 1
-    }
-
-    let answer = prompt("Select:")
-
-    if (!new_choices.includes(answer)){
-        if (parseInt(answer) >= 0 && parseInt(answer) < new_choices.length){
-            answer = new_choices[parseInt(answer)]
-        }
-        else{
-            console.log("Invalid Selection")
-            answer = multiple_choice_question(question, choices)
-        }
-    }
-
-    if (answer == 'None'){
-        answer = ''
-    }
-    return answer
-}
-
 export function generate_cache_paths(generate, local_path){
 
     let s3bucket_name = JSON.parse(process.env.s3_creds)["bucket"]
@@ -146,33 +69,6 @@ export function generate_cache_paths(generate, local_path){
         "md5": generate_md5(generate.source)
     }
     return dict
-}
-
-export function complete(commands){
-    return function (str) {
-      var i;
-      var ret = [];
-      for (i=0; i< commands.length; i++) {
-        if (commands[i].indexOf(str) == 0)
-          ret.push(commands[i]);
-      }
-      return ret;
-    };
-};
-
-export function parse_templates(templates){
-    let results = {}
-
-    let chat_templates = ["llama-2", "vicuna", "alpaca", "chatlm"]
-    let instruct_templates = []
-
-    for( var template in templates){
-        this_template = templates[template]
-        if(chat_templates.includes(this_template)){
-            results["chat"] = this_template
-        }
-    }
-    return results
 }
 
 export function folder_to_bytestream(folder){
