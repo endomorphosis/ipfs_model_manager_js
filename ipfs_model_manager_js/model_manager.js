@@ -4,23 +4,16 @@ import path from 'path';
 import util from 'util';
 import { promisify } from 'util';
 import { exec } from 'child_process';
-import { ipfs_kit_js } from 'ipfs_kit_js';
-//from './s3_kit.js' import S3Kit;
-//import AWS from 'aws-sdk';
-//import { S3 } from 'aws-sdk';
-//import ipfsClient from 'ipfs-http-client';
+import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
 import * as test_fio from './test_fio.js';
 import * as s3_kit from './s3_kit.js';
-import * as ipfs_kit from './ipfs_kit.js';
-import * as install_ipfs from './ipfs_kit_lib/install_ipfs.js';
+// import * as install_ipfs from './ipfs_kit_lib/install_ipfs.js';
 import fsExtra from 'fs-extra';
 import crypto from 'crypto';
 import rimraf from 'rimraf';
 import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
 
-//const s3 = new AWS.S3();
-//const ipfs = ipfsClient('http://localhost:5001');
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 const stat = util.promisify(fs.stat);
@@ -59,7 +52,8 @@ class ModelManager {
             this.localPath = "/root/";
             localPath = this.localPath;
         } else {
-            this.localPath = path.join(os.homeDir(), username);
+            this.homeDir = os.homedir();
+            this.localPath = this.homeDir;
             localPath = this.localPath;
         }
         if (meta !== null && typeof meta === 'object') {
