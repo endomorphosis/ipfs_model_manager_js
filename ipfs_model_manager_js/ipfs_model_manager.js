@@ -108,9 +108,8 @@ class ModelManager {
         let homeDirFiles = fs.readdirSync(homeDir);
         this.testFio = new test_fio.TestFio();
         this.s3Kit = new s3_kit.S3Kit(resources, meta);
-        let installIpfs = new install_ipfs.InstallIPFS(resources, meta);
-        this.ipfsKit = new ipfs_kit.IpfsKit(resources, meta);
-        this.installIpfs = installIpfs;
+        this.ipfsKitJs = new ipfsKitJs(resources, meta);
+        this.installIpfs = new installIpfs(resources, meta);
         let ipfsPath = this.ipfsPath;
         if (!fs.existsSync(this.ipfsPath)) {
             fs.mkdirSync(this.ipfsPath, { recursive: true });
@@ -121,7 +120,7 @@ class ModelManager {
         let ipfsPathFiles = fs.readdirSync(ipfsPath);
         if (!ipfsPathFiles.includes('ipfs') || !fs.existsSync(ipfsPath)) {
             this.installIpfs.installIpfsDaemon();
-            this.installIpfs.installIpget();
+            this.installIpfs.installIPGet();
             let stats = this.testFio.stats(this.ipfsPath);
             this.installIpfs.configIpfs({
                 diskStats: stats,
@@ -129,23 +128,22 @@ class ModelManager {
             });
         }            
         if (this.role === "master" && !homeDirFiles.includes('.ipfs-cluster-service')) {
-            this.installIpfs.installIPFSClusterService();
-            this.installIpfs.installIPFSClusterCtl();
-            this.installIpfs.configIPFSClusterService();
+            this.installIpfs.installIpfsClusterService();
+            this.installIpfs.installIpfsClusterCtl();
+            this.installIpfs.configIpfsClusterService();
             this.installIpfs.configIpfsClusterCtl();
         } else if (this.role === "worker" && !homeDirFiles.includes('.ipfs-cluster-follow')) {
-            this.installIpfs.installIPFSClusterService();
-            this.installIpfs.installIPFSClusterFollow();
-            this.installIpfs.configIPFSClusterService();
-            this.installIpfs.configIPFSClusterFollow();
+            this.installIpfs.installIpfsClusterService();
+            this.installIpfs.installIpfsClusterFollow();
+            this.installIpfs.configIpfsClusterService();
+            this.installIpfs.configIpfsClusterFollow();
         }
-
-        this.ipfsKit.ipfsKitStop();
-        this.ipfsKit.ipfsKitStart();
+        this.ipfsKitJs.ipfsKitStop();
+        this.ipfsKitJs.ipfsKitStart();
         let executeReady = false;
         while (executeReady != true) {
             try {
-                let readyIpfsKit = this.ipfsKit.ipfsKitReady();
+                let readyIpfsKit = this.ipfsKitJs.ipfsKitReady();
                 if (Object.keys(readyIpfsKit).every(k => readyIpfsKit[k] === true) || readyIpfsKit === true){
                     executeReady = true
                 }
