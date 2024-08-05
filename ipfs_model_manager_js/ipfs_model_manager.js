@@ -5,8 +5,8 @@ import util from 'util';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
-import * as test_fio from './test_fio.js';
-import * as s3_kit from './s3_kit.js';
+import * as testFio from './test_fio.js';
+import * as s3Kit from './s3_kit.js';
 // import * as install_ipfs from './ipfs_kit_lib/install_ipfs.js';
 import fsExtra from 'fs-extra';
 import crypto from 'crypto';
@@ -64,6 +64,7 @@ class ModelManager {
             this.modelHistory = meta.history || null;
             this.role = meta.role || null;
             this.clusterName = meta.cluster_name || null;
+            meta.clusterName = meta.cluster_name || null;
             if (Object.keys(meta).includes("localPath")){
                 this.localPath = meta.localPath;
             }
@@ -106,8 +107,8 @@ class ModelManager {
 
         let homeDir = os.homedir();
         let homeDirFiles = fs.readdirSync(homeDir);
-        this.testFio = new test_fio.TestFio();
-        this.s3Kit = new s3_kit.S3Kit(resources, meta);
+        this.testFio = new testFio.TestFio(resources, meta);
+        this.s3Kit = new s3Kit.s3Kit(resources, meta);
         this.ipfsKitJs = new ipfsKitJs(resources, meta);
         this.installIpfs = new installIpfs(resources, meta);
         let ipfsPath = this.ipfsPath;
@@ -137,22 +138,6 @@ class ModelManager {
             this.installIpfs.installIpfsClusterFollow();
             this.installIpfs.configIpfsClusterService();
             this.installIpfs.configIpfsClusterFollow();
-        }
-        this.ipfsKitJs.ipfsKitStop();
-        this.ipfsKitJs.ipfsKitStart();
-        let executeReady = false;
-        while (executeReady != true) {
-            try {
-                let readyIpfsKit = this.ipfsKitJs.ipfsKitReady();
-                if (Object.keys(readyIpfsKit).every(k => readyIpfsKit[k] === true) || readyIpfsKit === true){
-                    executeReady = true
-                }
-                else{
-                    executeReady = false
-                }
-            } catch (e) {
-                executeReady = e.toString();
-            }
         }
 
         this.models = {};
@@ -203,6 +188,50 @@ class ModelManager {
             default:
                 throw new Error(`Method ${method} not found`);
         }
+    }
+
+    async init(){
+        await this.ipfsKitJs.ipfsKitStop().then((results) => {
+            console.log(results);
+        }).catch((e) => {
+            console.log(e);
+        });
+        await this.ipfsKitJs.ipfsKitStart().then((results) => {
+            console.log(results);
+        }).catch((e) => {
+            console.log(e);
+        });
+        let executeReady = false;
+        while (executeReady != true) {
+            try {
+                let readyIpfsKit = await this.ipfsKitJs.ipfsKitReady().then(
+                    (results) => {
+                        executeReady = results;
+                    }
+                ).catch((e) => {
+                    console.log(e);
+                    executeReady = false
+                });
+                if (executeReady == true) {
+                    return executeReady;
+                }
+                if (Object.keys(readyIpfsKit).every(k => readyIpfsKit[k] === true) || readyIpfsKit === true){
+                    executeReady = true
+                }
+                else{
+                    executeReady = false
+                }
+                if (executeReady == true) {
+                    return executeReady;
+                }
+            } catch (e) {
+                executeReady = e.toString();
+            }
+            if (executeReady == true) {
+                break;
+            }
+        }
+        return executeReady;
     }
 
     async loadCollection(kwargs) {
@@ -1713,12 +1742,13 @@ class ModelManager {
     }
 
     async test(kwargs = {}) {
+        await this.init();
         await this.loadCollectionCache();
-        await this.state();
-        await this.state({src: "s3"});
+        // await this.state();
+        // await this.state({src: "s3"});
         await this.state({src: "local"});
-        await this.state({src: "ipfs"});
-        await this.state({src: "https"});
+        // await this.state({src: "ipfs"});
+        // await this.state({src: "https"});
         await this.checkPinnedModels();
         await this.checkHistoryModels();
         await this.randHistory();

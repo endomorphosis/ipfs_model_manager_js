@@ -5,7 +5,7 @@ import os from 'os';
 import util from 'util';
 import { ObjectLockEnabled } from '@aws-sdk/client-s3';
 
-export class S3Kit {
+export class s3Kit {
 	constructor(resources, meta = null) {
 		this.bucket = null;
 		this.bucketFiles = null;
