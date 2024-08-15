@@ -6,13 +6,14 @@ import { promisify } from 'util';
 import { exec } from 'child_process';
 import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
 import * as testFio from './test_fio.js';
-import * as s3Kit from './s3_kit.js';
+// import * as s3Kit from './s3_kit.js';
 // import * as install_ipfs from './ipfs_kit_lib/install_ipfs.js';
 import fsExtra from 'fs-extra';
 import crypto from 'crypto';
 import rimraf from 'rimraf';
 import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
+import { execSync } from 'child_process';
 
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
@@ -108,7 +109,7 @@ class ModelManager {
         let homeDir = os.homedir();
         let homeDirFiles = fs.readdirSync(homeDir);
         this.testFio = new testFio.TestFio(resources, meta);
-        this.s3Kit = new s3Kit.s3Kit(resources, meta);
+        // this.s3Kit = new s3Kit.s3Kit(resources, meta);
         this.ipfsKitJs = new ipfsKitJs(resources, meta);
         this.installIpfs = new installIpfs(resources, meta);
         let ipfsPath = this.ipfsPath;
@@ -308,8 +309,8 @@ class ModelManager {
     }
 
     async downloadHttps(httpsSrc, modelPath, kwargs) {
-        let suffix = "." + httpsSrc.split("/").pop().split(".").pop();
-        let dstPath, filename, dirname;
+        let suffix = httpsSrc.split("/").pop().split(".").pop();
+        let dstPath, filename, dirname, thisTempFile, tmpFilename;
 
         if (fs.existsSync(modelPath)) {
             if (fs.lstatSync(modelPath).isDirectory()) {
@@ -331,22 +332,26 @@ class ModelManager {
             }
         }
         try{
-            let thisTempFile = await new Promise((resolve, reject) => {
-                this.tmpFile.createTempFile({  postfix: suffix, dir: '/tmp' }, async (err, path, fd, cleanupCallback) => {                    
-                    if (err) {
-                        console.log(err);
-                        reject(err);
-                    } else {  
-                        let tmpFilename = path.split("/").pop();
-                        let command = `aria2c -x 16 ${httpsSrc} -d /tmp -o ${tmpFilename} --allow-overwrite=true`;          
-                        await execsync(command).then((results) => {
-                            console.log(results)
-                            resolve({ name: path, fd, removeCallback: cleanupCallback });
-                        }).catch((e) => {
-                            console.log(e);
-                            reject(e);
-                        });
-                    }   
+            thisTempFile  = await new Promise((resolve, reject) => {
+                this.tmpFile.createTempFile({postfix:suffix, dir: '/tmp'}).then((results) => {
+                    // console.log(results);
+                    tmpFilename = results.tempFilePath.split("/").pop();
+                    let https_command = `aria2c -x 16 ${httpsSrc} -d /tmp -o ${tmpFilename} --allow-overwrite=true`;
+                    exec(https_command, (error, stdout, stderr) => {
+                        if (error) {
+                            console.log(error);
+                            return;
+                        }
+                        if (stderr) {
+                            console.log(stderr);
+                            return;
+                        }
+                        // console.log(stdout);
+                        resolve({ name: results.tempFilePath, fd: results.fd, removeCallback: results.cleanupCallback });
+                    });
+                    // resolve(results);
+                }).catch((e) => {
+                    reject(e);
                 });
             });
         }
@@ -354,28 +359,29 @@ class ModelManager {
             console.log(e);
         }
 
-
         if (fs.existsSync(dstPath)) {
-            let command2 = `rm ${dstPath}`;
-            await exec(command2);
+            fs.rmSync(dstPath);
         }
 
         if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
-            let command3 = `mv /tmp/${tmpFilename} ${dstPath}`;
-            await exec(command3);
+            fs.moveFile(thisTempFile.name, dstPath, { overwrite: true }, (err) => {
+                if (err) {
+                    console.log(err);
+                }
+            });
 
             if (fs.existsSync(thisTempFile.name)) {
-                let command4 = `rm /tmp/${tmpFilename}`;
-                await exec(command4);
+                fs.rmSync(thisTempFile.name);
             }
         } else {
-            let command3 = `cp /tmp/${tmpFilename} ${dstPath}`;
-            await exec(command3);
-
+            fs.copyFileSync(thisTempFile.name, dstPath);
             if (fs.existsSync(thisTempFile.name)) {
-                let command4 = `rm /tmp/${tmpFilename}`;
-                await exec(command4);
+                fs.rmSync(thisTempFile.name);
             }
+        }
+
+        if (thisTempFile.removeCallback != undefined && typeof thisTempFile.removeCallback === 'function') {
+            thisTempFile.removeCallback();
         }
 
         return dstPath;
@@ -774,7 +780,7 @@ class ModelManager {
             //     await rimraf("./collection.json");
             // }
             if (fs.existsSync(httpsCollection)) {
-                let data = await fs.readFileSync(cache.https, 'utf8');
+                let data = await fs.readFileSync(httpsCollection, 'utf8');
                 this.httpsCollection = JSON.parse(data);
             } else if (fs.existsSync('/tmp/collection.json')) {
                 let data = await readFile('/tmp/collection.json');

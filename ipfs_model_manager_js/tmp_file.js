@@ -16,7 +16,9 @@ export class TempFileManager {
         const tempFilePath = path.join(dir, tempFileName);
         const fd = fs.openSync(tempFilePath, 'w');
         const cleanupCallback = () => {
-            fs.unlinkSync(tempFilePath);
+            if (fs.existsSync(tempFilePath)){
+                fs.unlinkSync(tempFilePath);
+            }
         };
         let results = { tempFilePath, fd, cleanupCallback };
         return (results);
