@@ -285,22 +285,22 @@ class ModelManager {
             this.localCollection = JSON.parse(fs.readFileSync(path.join(this.ipfsPath, "collection.json"), 'utf8'));
         }
     
-        let ipfsStop, ipfsStart;
-        try {
-            ipfsStop = await this.ipfsKit.ipfsKitStop();
-        } catch (e) {
-            ipfsStop = e;
-        }
+        // let ipfsStop, ipfsStart;
+        // try {
+        //     ipfsStop = await this.ipfsKit.ipfsKitStop();
+        // } catch (e) {
+        //     ipfsStop = e;
+        // }
     
-        try {
-            ipfsStart = await this.ipfsKit.ipfsKitStart();
-        } catch (e) {
-            ipfsStart = e;
-        }
+        // try {
+        //     ipfsStart = await this.ipfsKit.ipfsKitStart();
+        // } catch (e) {
+        //     ipfsStart = e;
+        // }
     
         return {
-            "ipfs_stop": ipfsStop,
-            "ipfs_start": ipfsStart,
+            // "ipfs_stop": ipfsStop,
+            // "ipfs_start": ipfsStart,
             "ipfsCollection": this.ipfsCollection,
             "s3Collection": this.s3Collection,
             "localCollection": this.localCollection,
@@ -364,12 +364,7 @@ class ModelManager {
         }
 
         if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
-            fs.moveFile(thisTempFile.name, dstPath, { overwrite: true }, (err) => {
-                if (err) {
-                    console.log(err);
-                }
-            });
-
+            fs.renameSync(thisTempFile.name, dstPath);
             if (fs.existsSync(thisTempFile.name)) {
                 fs.rmSync(thisTempFile.name);
             }
@@ -442,12 +437,7 @@ class ModelManager {
         }
 
         if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
-            fs.moveFile(thisTempFile.name, dstPath, { overwrite: true }, (err) => {
-                if (err) {
-                    console.log(err);
-                }
-            });
-
+            fs.renameSync(thisTempFile.name, dstPath);
             if (fs.existsSync(thisTempFile.name)) {
                 fs.rmSync(thisTempFile.name);
             }
@@ -545,11 +535,9 @@ class ModelManager {
                 this.tmpFile.createTempFile({postfix:suffix, dir: '/tmp'}).then((results) => {
                     // console.log(results);
                     tmpFilename = results.tempFilePath.split("/").pop();                    
-                    let results = ipfs.get(ipfsSrc, { timeout: 10000 }).then((results) => {
+                    let ipfsResults = this.ipfsKitJs.ipgetDownloadObject(ipfsSrc, results.tempFilePath,  { timeout: 10000 }).then((results) => {
                         if (results.path) {
-                            fs.renameSync(results.path, filenameDst);
                             resolve({ name: results.tempFilePath, fd: results.fd, removeCallback: results.cleanupCallback });
-                            // return filenameDst;
                         } else {
                             throw new Error("No path in results or timeout");
                         }
@@ -571,12 +559,7 @@ class ModelManager {
         }
 
         if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
-            fs.moveFile(thisTempFile.name, dstPath, { overwrite: true }, (err) => {
-                if (err) {
-                    console.log(err);
-                }
-            });
-
+            fs.renameSync(thisTempFile.name, dstPath);
             if (fs.existsSync(thisTempFile.name)) {
                 fs.rmSync(thisTempFile.name);
             }
@@ -923,6 +906,11 @@ class ModelManager {
         ipfs: "QmXBUkLywjKGTWNDMgxknk6FJEYu9fZaEepv3djmnEqEqD",
         https: "https://huggingface.co/endomorphosis/cloudkit-collection/resolve/main/collection.json"
     }){
+        this.localCollection = {};
+        this.ipfsCollection = {};
+        this.s3Collection = {};
+        this.httpsCollection = {};
+
         let timestamp_0 = Date.now();
         if (fs.existsSync(cache.local)) {
             let data = await readFile(cache.local);
@@ -932,28 +920,74 @@ class ModelManager {
             let httpsCollection = await this.downloadHttps(cache.https, '/tmp/collection.json');
             if (fs.existsSync(httpsCollection)) {
                 let data = await fs.readFileSync(httpsCollection, 'utf8');
-                this.httpsCollection = JSON.parse(data);
+                try{
+                    this.httpsCollection = JSON.parse(data);
+                }
+                catch(e){
+                    this.httpsCollection = {};
+                    console.log(e);
+                }
             } else if (fs.existsSync('/tmp/collection.json')) {
                 let data = await readFile('/tmp/collection.json');
-                this.httpsCollection = JSON.parse(data);
+                try{
+                    this.httpsCollection = JSON.parse(data);
+                }
+                catch(e){
+                    this.httpsCollection = {};
+                    console.log(e);
+                }
             }
         } catch (e) {
             console.log(e);
         }
         let timestamp_1 = Date.now();
         try {
-            let ipfsDownload = await this.downloadIpfs(cache.ipfs, '/tmp/collection.json');
-            let data = await readFile(ipfsDownload);
-            this.ipfsCollection = JSON.parse(data);
+            let ipfsCollection = await this.downloadIpfs(cache.ipfs, '/tmp/collection.json');
+            if (fs.existsSync(ipfsCollection)) {
+                let data = await fs.readFileSync(ipfsCollection, 'utf8');
+                try{
+                    this.ipfsCollection = JSON.parse(data);
+                }
+                catch(e){
+                    this.ipfsCollection = {};
+                    console.log(e);
+                }
+            } else if (fs.existsSync('/tmp/collection.json')) {
+                let data = await readFile('/tmp/collection.json');
+                try{
+                    this.ipfsCollection = JSON.parse(data);
+                }
+                catch(e){
+                    this.ipfsCollection = {};
+                    console.log(e);
+                }
+            }
         } catch (e) {
             console.log(e);
         }
         let timestamp_2 = Date.now();
         try {
             let s3Download = await this.downloadS3(cache.s3, '/tmp/collection.json');
-//            let s3_download = await this.download_s3(cache.s3, '/tmp/collection.json');
-            let data = await readFile(s3Download);
-            this.s3Collection = JSON.parse(data);
+            if (fs.existsSync(s3Download)) {
+                let data = await fs.readFileSync(s3Download, 'utf8');
+                try{
+                    this.s3Collection = JSON.parse(data);
+                }
+                catch(e){
+                    this.s3Collection = {};
+                    console.log(e);
+                }
+            }
+            else if (fs.existsSync('/tmp/collection.json')) {
+                let data = await readFile('/tmp/collection.json');
+                try{
+                    this.s3Collection = JSON.parse(data);
+                }
+                catch(e){
+                    this.s3Collection = {};
+                    console.log(e);
+                }
+            }
         } catch (e) {
             console.log(e);
         }
@@ -965,10 +999,29 @@ class ModelManager {
             s3: timestamp_3 - timestamp_2
         };
 
-        let fastest = Object.keys(timestamps).reduce((a, b) => timestamps[a] < timestamps[b] ? a : b);
-        this.fastest = fastest;
-        let file_size = (await stat('/tmp/collection.json')).size;
-        this.bandwidth = file_size / timestamps[fastest];
+        let fastestFound = false;
+        while (fastestFound == false && Object.keys(timestamps).length > 1) {
+            let fastest = Object.keys(timestamps).reduce((a, b) => timestamps[a] < timestamps[b] ? a : b);
+            let fastestKey = fastest + "Collection";
+            if (Object.keys(this[fastestKey]).length > 0) {
+                this.collection = this[fastestKey];
+                fastestFound = fastest;
+            }
+            else{
+                delete timestamps[fastest];
+            }
+        }
+        
+        if (fastestFound != false) {
+            this.fastest = fastestFound;
+            let fastest_collection = this.fastest + "Collection";
+            let file_size = JSON.stringify(this[fastest_collection]).length;
+            this.bandwidth = file_size / timestamps[this.fastest];
+        }
+        else{
+            this.fastest = null;
+            this.bandwidth = 0;
+        }
 
         let md5_local = crypto.createHash('md5').update(JSON.stringify(this.localCollection)).digest("hex");
         let md5_ipfs = crypto.createHash('md5').update(JSON.stringify(this.ipfsCollection)).digest("hex");
