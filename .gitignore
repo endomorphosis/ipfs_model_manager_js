@@ -1,3 +1,4 @@
 node_modules
 package-lock.json
 ipfs_kit_lib/bin/*
+config/config.toml
