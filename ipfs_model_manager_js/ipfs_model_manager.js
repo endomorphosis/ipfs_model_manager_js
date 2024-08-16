@@ -332,7 +332,7 @@ class ModelManager {
             }
         }
         try{
-            thisTempFile  = await new Promise((resolve, reject) => {
+            thisTempFile = await new Promise((resolve, reject) => {
                 this.tmpFile.createTempFile({postfix:suffix, dir: '/tmp'}).then((results) => {
                     // console.log(results);
                     tmpFilename = results.tempFilePath.split("/").pop();
@@ -387,7 +387,85 @@ class ModelManager {
         return dstPath;
     }
 
-    async downloadS3(s3Src, filenameDst, kwargs) {
+    async downloadS3(s3Src, modelPath, kwargs) {
+        let suffix = s3Src.split("/").pop().split(".").pop();
+        let dstPath, filename, dirname, thisTempFile, tmpFilename;
+
+        if (fs.existsSync(modelPath)) {
+            if (fs.lstatSync(modelPath).isDirectory()) {
+                filename = s3Src.split("/").pop();
+                dstPath = path.join(modelPath, filename);
+            } else {
+                filename = s3Src.split("/").pop();
+                dirname = path.dirname(modelPath);
+                dstPath = path.join(dirname, filename);
+            }
+        } else {
+            dirname = path.dirname(modelPath);
+            filename = s3Src.split("/").pop();
+            if (fs.existsSync(dirname)) {
+                dstPath = path.join(dirname, filename);
+            } else {
+                fs.mkdirSync(dirname, { recursive: true });
+                dstPath = path.join(dirname, filename);
+            }
+        }
+        try{
+            thisTempFile = await new Promise((resolve, reject) => {
+                this.tmpFile.createTempFile({postfix:suffix, dir: '/tmp'}).then((results) => {
+                    // console.log(results);
+                    tmpFilename = results.tempFilePath.split("/").pop();
+                    let thisFileKey = s3Src.split(s3cfg["bucket"] + "/")[1];
+
+                    let params = {
+                        Bucket: s3cfg["bucket"],
+                        Key: thisFileKey
+                    };
+    
+                    let file = fs.createWriteStream(thisTempFile.name);
+                    let stream = s3.getObject(params).createReadStream().pipe(file);
+    
+                    stream.on('finish', resolve);
+                    stream.on('error', reject);    
+    
+                }).catch((e) => {
+                    reject(e);
+                });
+            });
+        }
+        catch(e){
+            console.log(e);
+        }
+
+        if (fs.existsSync(dstPath)) {
+            fs.rmSync(dstPath);
+        }
+
+        if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
+            fs.moveFile(thisTempFile.name, dstPath, { overwrite: true }, (err) => {
+                if (err) {
+                    console.log(err);
+                }
+            });
+
+            if (fs.existsSync(thisTempFile.name)) {
+                fs.rmSync(thisTempFile.name);
+            }
+        } else {
+            fs.copyFileSync(thisTempFile.name, dstPath);
+            if (fs.existsSync(thisTempFile.name)) {
+                fs.rmSync(thisTempFile.name);
+            }
+        }
+
+        if (thisTempFile.removeCallback != undefined && typeof thisTempFile.removeCallback === 'function') {
+            thisTempFile.removeCallback();
+        }
+
+        return dstPath;
+    }
+
+    async downloadS3_bak(s3Src, filenameDst, kwargs) {
         if (filenameDst.split(".").length > 1) {
             try {
                 let suffix = "." + filenameDst.split(".").pop();
@@ -439,7 +517,84 @@ class ModelManager {
         }
     }
 
-    async downloadIpfs(ipfsSrc, filenameDst, kwargs) {
+    async downloadIpfs(ipfsSrc, modelPath, kwargs) {
+        let suffix = ipfsSrc.split("/").pop().split(".").pop();
+        let dstPath, filename, dirname, thisTempFile, tmpFilename;
+
+        if (fs.existsSync(modelPath)) {
+            if (fs.lstatSync(modelPath).isDirectory()) {
+                filename = ipfsSrc.split("/").pop();
+                dstPath = path.join(modelPath, filename);
+            } else {
+                filename = ipfsSrc.split("/").pop();
+                dirname = path.dirname(modelPath);
+                dstPath = path.join(dirname, filename);
+            }
+        } else {
+            dirname = path.dirname(modelPath);
+            filename = ipfsSrc.split("/").pop();
+            if (fs.existsSync(dirname)) {
+                dstPath = path.join(dirname, filename);
+            } else {
+                fs.mkdirSync(dirname, { recursive: true });
+                dstPath = path.join(dirname, filename);
+            }
+        }
+        try{
+            thisTempFile = await new Promise((resolve, reject) => {
+                this.tmpFile.createTempFile({postfix:suffix, dir: '/tmp'}).then((results) => {
+                    // console.log(results);
+                    tmpFilename = results.tempFilePath.split("/").pop();                    
+                    let results = ipfs.get(ipfsSrc, { timeout: 10000 }).then((results) => {
+                        if (results.path) {
+                            fs.renameSync(results.path, filenameDst);
+                            resolve({ name: results.tempFilePath, fd: results.fd, removeCallback: results.cleanupCallback });
+                            // return filenameDst;
+                        } else {
+                            throw new Error("No path in results or timeout");
+                        }
+                    }).catch((e) => {
+                        console.log(e);
+                        reject(e);
+                    });
+                }).catch((e) => {
+                    reject(e);
+                });
+            });
+        }
+        catch(e){
+            console.log(e);
+        }
+
+        if (fs.existsSync(dstPath)) {
+            fs.rmSync(dstPath);
+        }
+
+        if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
+            fs.moveFile(thisTempFile.name, dstPath, { overwrite: true }, (err) => {
+                if (err) {
+                    console.log(err);
+                }
+            });
+
+            if (fs.existsSync(thisTempFile.name)) {
+                fs.rmSync(thisTempFile.name);
+            }
+        } else {
+            fs.copyFileSync(thisTempFile.name, dstPath);
+            if (fs.existsSync(thisTempFile.name)) {
+                fs.rmSync(thisTempFile.name);
+            }
+        }
+
+        if (thisTempFile.removeCallback != undefined && typeof thisTempFile.removeCallback === 'function') {
+            thisTempFile.removeCallback();
+        }
+
+        return dstPath;
+    }
+
+    async downloadIpfs_bak(ipfsSrc, filenameDst, kwargs) {
         if (filenameDst.split(".").length > 1) {
             try {
                 if (!filenameDst.includes(".cache") && filenameDst.includes(".")) {
@@ -454,7 +609,7 @@ class ModelManager {
                         });
                     });
         
-                    let results = await ipfs.get(ipfsSrc, { timeout: 10000 });
+                    
                     if (results.path) {
                         fs.renameSync(results.path, filenameDst);
 
@@ -775,10 +930,6 @@ class ModelManager {
         }
         try {
             let httpsCollection = await this.downloadHttps(cache.https, '/tmp/collection.json');
-            // if (fs.existsSync("./collection.json/collection.json")) {
-            //     await moveFile("./collection.json/collection.json", "/tmp/collection.json");
-            //     await rimraf("./collection.json");
-            // }
             if (fs.existsSync(httpsCollection)) {
                 let data = await fs.readFileSync(httpsCollection, 'utf8');
                 this.httpsCollection = JSON.parse(data);
