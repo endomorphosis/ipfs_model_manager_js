@@ -4,9 +4,21 @@ import path from 'path';
 import os from 'os';
 import util from 'util';
 import { ObjectLockEnabled } from '@aws-sdk/client-s3';
+import { requireConfig } from '../config/config.js';
 
 export class s3Kit {
 	constructor(resources, meta = null) {
+		this.thisDir = path.dirname(import.meta.url);
+        if (this.thisDir.startsWith("file://")) {
+            this.thisDir = this.thisDir.replace("file://", "");
+        }
+        this.parentDir = path.dirname(this.thisDir);
+        if (fs.existsSync(path.join(this.parentDir, "config", "config.toml"))) {
+            this.config = new requireConfig({config: path.join(this.parentDir, "config", "config.toml")});
+        }
+        else{
+            // this.config = new requireConfig();
+        }
 		this.bucket = null;
 		this.bucketFiles = null;
 		this.cpDir = this.s3CpDir;
