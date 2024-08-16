@@ -697,7 +697,7 @@ export class s3Kit {
 
 
 async function main() {
-		const testThis = new S3Kit();
+		const testThis = new s3Kit();
 		await testThis.test();
 		await testThis.test2();
 		await testThis.test3();
