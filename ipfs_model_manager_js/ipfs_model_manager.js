@@ -14,6 +14,8 @@ import rimraf from 'rimraf';
 import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
 import { execSync } from 'child_process';
+import { requireConfig } from '../config/config.js';
+
 
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
@@ -24,7 +26,17 @@ const tmpFile = new temp_file.TempFileManager()
 
 class ModelManager {
     constructor(resources = null, meta = null) {
-        
+        this.thisDir = path.dirname(import.meta.url);
+        if (this.thisDir.startsWith("file://")) {
+            this.thisDir = this.thisDir.replace("file://", "");
+        }
+        this.parentDir = path.dirname(this.thisDir);
+        if (fs.existsSync(path.join(this.parentDir, "config", "config.toml"))) {
+            this.config = new requireConfig({config: path.join(this.parentDir, "config", "config.toml")});
+        }
+        else{
+            // this.config = new requireConfig();
+        }
         this.models = {
             "s3_models": [],
             "ipfs_models": [],

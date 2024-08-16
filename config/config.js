@@ -39,7 +39,17 @@ export function loadConfig(self, configPath, overrides = None){
 }
 
 export function requireConfig(opts){
-	const configPath = findConfig() || opts.config
+	if (opts != undefined){
+		if (Object.keys(opts).includes('config')){
+			const configPath = opts.config
+		}
+		else{
+			const configPath = findConfig()
+		}
+	}
+	else{
+		const configPath = findConfig()
+	}
 
 	if(!configPath){
 		console.error(`no config file found`)
