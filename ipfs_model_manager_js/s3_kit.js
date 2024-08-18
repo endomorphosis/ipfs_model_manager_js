@@ -43,7 +43,7 @@ export class s3Kit {
 		this.s3cfgToBoto = this.configToBoto;
 		this.getSession = this.getSession;
 		if (meta !== null) {
-			if ('s3cfg' in meta) {
+			if (Object.keys(meta).includes('s3cfg')) {
 				if (meta['s3cfg'] !== null) {
 					this.s3cfg = meta['s3cfg'];
 					this.getSession(meta['s3cfg']);
@@ -125,10 +125,6 @@ export class s3Kit {
 		
 	async s3LsDir(dir, bucketName, kwargs) {
 		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
-		AWS.config.update({
-			accessKeyId: 'YOUR_ACCESS_KEY_ID',
-			secretAccessKey: 'YOUR_SECRET_ACCESS_KEY'
-		});
 		  
 		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		
@@ -749,5 +745,5 @@ async function test() {
 	await testThis.test();
 }
 
-// test();
+test();
 // main();

@@ -6,7 +6,7 @@ import { promisify } from 'util';
 import { exec } from 'child_process';
 import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
 import * as testFio from './test_fio.js';
-// import * as s3Kit from './s3_kit.js';
+import * as s3Kit from './s3_kit.js';
 // import * as install_ipfs from './ipfs_kit_lib/install_ipfs.js';
 import fsExtra from 'fs-extra';
 import crypto from 'crypto';
@@ -15,7 +15,6 @@ import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
 import { execSync } from 'child_process';
 import { requireConfig } from '../config/config.js';
-
 
 const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
@@ -33,6 +32,7 @@ class ModelManager {
         this.parentDir = path.dirname(this.thisDir);
         if (fs.existsSync(path.join(this.parentDir, "config", "config.toml"))) {
             this.config = new requireConfig({config: path.join(this.parentDir, "config", "config.toml")});
+            this.s3cfg = this.config.s3;
         }
         else{
             // this.config = new requireConfig();
@@ -58,7 +58,6 @@ class ModelManager {
         this.thisModelPath = null;
         this.thisModel = null;
         this.thisModelName = null;
-        this.s3cfg = null;
         let username = os.userInfo().username;
         let localPath
         if (username === "root") {
@@ -70,7 +69,10 @@ class ModelManager {
             localPath = this.localPath;
         }
         if (meta !== null && typeof meta === 'object') {
-            this.s3cfg = meta.s3cfg || null;
+            // for (let key in meta) {
+            //     this[key] = meta[key];
+            // }
+            // this.s3cfg = meta.s3cfg || null;
             this.ipfsSrc = meta.ipfs_src || null;
             this.timing = meta.timing || null;
             this.collectionCache = meta.cache || null;
@@ -94,12 +96,14 @@ class ModelManager {
                 meta.ipfsPath = path.join(this.localPath, ".cache/ipfs");
             }
             this.ipfsPath = meta.ipfsPath || (this.localPath + "/.cache/ipfs");
-            this.s3cfg = meta.s3cfg || null;
+            // this.s3cfg = meta.s3cfg || null;
+            if (Object.keys(meta).includes("s3_cfg")){
+                this.s3cfg = meta.s3_cfg;
+            }
         } 
         else {
             this.localPath = path.join(this.ipfsPath , "cloudkit-models");
             // get the username of the current user and determine if its root
-            this.s3cfg = null;
             this.role = "leecher";
             this.clusterName = "cloudkit_storage";
             this.cache = {
@@ -121,7 +125,7 @@ class ModelManager {
         let homeDir = os.homedir();
         let homeDirFiles = fs.readdirSync(homeDir);
         this.testFio = new testFio.TestFio(resources, meta);
-        // this.s3Kit = new s3Kit.s3Kit(resources, meta);
+        this.s3Kit = new s3Kit.s3Kit(resources, meta);
         this.ipfsKitJs = new ipfsKitJs(resources, meta);
         this.installIpfs = new installIpfs(resources, meta);
         let ipfsPath = this.ipfsPath;
@@ -1361,7 +1365,7 @@ class ModelManager {
     }
 
     async lsLocalModels(kwargs) {
-        let lsModels = this.lsModels();
+        let lsModels = await this.lsModels();
         let localModels = {};
         let timestamps = {};
     
@@ -1726,7 +1730,7 @@ class ModelManager {
 
 
     async checkHistoryModels(kwargs = {}) {
-        const lsModels = this.lsModels();
+        const lsModels = await this.lsModels();
         const currentTimestamp = Date.now() / 1000;
         const historyJsonPath = path.join(this.ipfsPath, "history.json");
     
@@ -1769,7 +1773,7 @@ class ModelManager {
 
 
     async checkZombies(kwargs = {}) {
-        const lsModels = this.lsModels();
+        const lsModels = await this.lsModels();
         const localFiles = fs.readdirSync(this.localPath, { withFileTypes: true });
         const lsLocalFiles = [];
         const collectionFiles = ["collection.json"];
@@ -1799,7 +1803,7 @@ class ModelManager {
     
         const s3Files = await this.s3Kit.s3LsDir("", this.s3cfg["bucket"]);
         const s3FileNames = s3Files.map(file => file["key"]);
-        const ipfsFiles = await this.ipfsKit.ipfsLsPath("/");
+        const ipfsFiles = await this.ipfsKitJs.ipfsLsPath("/");
         const ipfsFileNames = ipfsFiles["ipfsLsPath"].map(file => file["name"]);
     
         const collectionPins = this.collectionPins;
@@ -1834,7 +1838,7 @@ class ModelManager {
     }
 
     async checkExpired(kwargs = {}) {
-        const lsModels = this.lsModels();
+        const lsModels = await this.lsModels();
         const currentTimestamp = Date.now() / 1000;
         const expired = {
         "local" : [],
@@ -1868,7 +1872,7 @@ class ModelManager {
     }
 
     async checkPinnedModels(kwargs = {}) {
-        const lsModels = this.lsModels();
+        const lsModels = await this.lsModels();
         while (Object.keys(this.pinnedModels).length < 5) {
             const randomNumber = Math.random();
             const calculate = Math.round(randomNumber * lsModels.length);
@@ -1917,22 +1921,26 @@ class ModelManager {
     async downloadMissing(kwargs = {}) {
         const currentTimestamp = Date.now() / 1000;
         const notFound = this.checkNotFound();
-        for (const model of notFound["local"]) {
-            if (model in this.pinnedModels) {
-                this.download_model(model);
-                this.models["local_models"][model] = Date.now() / 1000;
-            } else if (this.historyModels[model] > currentTimestamp - this.timing["local_time"]) {
-                this.download_model(model);
-                this.models["local_models"][model] = Date.now() / 1000;
+        if (Object.keys(notFound).includes("local")){
+            for (const model of notFound["local"]) {
+                if (model in this.pinnedModels) {
+                    this.download_model(model);
+                    this.models["local_models"][model] = Date.now() / 1000;
+                } else if (this.historyModels[model] > currentTimestamp - this.timing["local_time"]) {
+                    this.download_model(model);
+                    this.models["local_models"][model] = Date.now() / 1000;
+                }
             }
         }
-        for (const model of notFound["s3"]) {
-            if (model in this.pinnedModels) {
-                this.s3Kit.s3UlDir(this.localPath + "/" + model, this.s3cfg["bucket"], this.models["s3_models"][model]["folderData"]);
-                this.models["s3_models"][model] = Date.now() / 1000;
-            } else if (this.historyModels[model] > currentTimestamp - this.timing["s3_time"]) {
-                this.s3Kit.s3UlDir(this.localPath + "/" + model, this.s3cfg["bucket"], this.models["s3_models"][model]["folderData"]);
-                this.models["s3_models"][model] = Date.now() / 1000;
+        if(Object.keys(notFound).includes("s3")){
+            for (const model of notFound["s3"]) {
+                if (model in this.pinnedModels) {
+                    this.s3Kit.s3UlDir(this.localPath + "/" + model, this.s3cfg["bucket"], this.models["s3_models"][model]["folderData"]);
+                    this.models["s3_models"][model] = Date.now() / 1000;
+                } else if (this.historyModels[model] > currentTimestamp - this.timing["s3_time"]) {
+                    this.s3Kit.s3UlDir(this.localPath + "/" + model, this.s3cfg["bucket"], this.models["s3_models"][model]["folderData"]);
+                    this.models["s3_models"][model] = Date.now() / 1000;
+                }
             }
         }
         return null;
@@ -1981,7 +1989,7 @@ class ModelManager {
         // this.download_model('stablelm-zephyr-3b-GGUF-Q2_K');
         await this.downloadMissing();
         await this.evictExpiredModels();
-        await this.evictZombies();
+        // await this.evictZombies();
         return this;
     }
 
@@ -2022,7 +2030,7 @@ const timing = {
     "https_time": never,
 };
 const meta = {
-    "s3cfg": s3cfg,
+    // "s3cfg": s3cfg,
     "ipfs_src": ipfs_src,
     "timing": timing,
     "cache": cache,
