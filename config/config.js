@@ -30,7 +30,8 @@ export function findConfig(){
 		: undefined
 }
 
-export function loadConfig(self, configPath, overrides = None){
+export function loadConfig( configPath, overrides = {}){
+	
 	return overrideToml(
 		baseConfig,
 		parseToml(fs.readFileSync(configPath), 'camelCase'),
@@ -39,16 +40,17 @@ export function loadConfig(self, configPath, overrides = None){
 }
 
 export function requireConfig(opts){
+	let configPath
 	if (opts != undefined){
 		if (Object.keys(opts).includes('config')){
-			const configPath = opts.config
+			configPath = opts.config
 		}
 		else{
-			const configPath = findConfig()
+			configPath = findConfig()
 		}
 	}
 	else{
-		const configPath = findConfig()
+		configPath = findConfig()
 	}
 
 	if(!configPath){

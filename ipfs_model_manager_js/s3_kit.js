@@ -3,8 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import util from 'util';
+import moment from 'moment'; // Add this line to import the moment library
 import { ObjectLockEnabled } from '@aws-sdk/client-s3';
 import { requireConfig } from '../config/config.js';
+
+// Set AWS credentials
 
 export class s3Kit {
 	constructor(resources, meta = null) {
@@ -15,10 +18,12 @@ export class s3Kit {
         this.parentDir = path.dirname(this.thisDir);
         if (fs.existsSync(path.join(this.parentDir, "config", "config.toml"))) {
             this.config = new requireConfig({config: path.join(this.parentDir, "config", "config.toml")});
-        }
+			this.s3cfg = this.config.s3;
+		}
         else{
-            // this.config = new requireConfig();
+            // this.s3cfg = new requireConfig();
         }
+		
 		this.bucket = null;
 		this.bucketFiles = null;
 		this.cpDir = this.s3CpDir;
@@ -34,16 +39,24 @@ export class s3Kit {
 		this.ulDir = this.s3UlDir;
 		this.ulFile = this.s3UlFile;
 		this.mkDir = this.s3MkDir;
+		this.configToBoto = this.configToBoto;
+		this.s3cfgToBoto = this.configToBoto;
 		this.getSession = this.getSession;
 		if (meta !== null) {
 			if ('s3cfg' in meta) {
 				if (meta['s3cfg'] !== null) {
-					this.config = meta['s3cfg'];
+					this.s3cfg = meta['s3cfg'];
 					this.getSession(meta['s3cfg']);
 				}
 			}
 		}
-		this.s3 = new AWS.S3(this.config);
+		this.s3 = new AWS.S3(this.s3cfg);
+		this.s3.config.update({
+			accessKeyId: this.s3cfg.accessKey,
+			secretAccessKey: this.s3cfg.secretKey,
+			endpoint: this.s3cfg.endpoint,
+			s3ForcePathStyle: true
+		});
 	}
 
 	call(method, kwargs) {
@@ -105,39 +118,46 @@ export class s3Kit {
 		}
 		if (method === 'config_to_boto') {
 			this.method = 'config_to_boto';
-			return this.configToBoto(kwargs);
+			return this.s3cfgToBoto(kwargs);
 		}
 	}
 
 		
 	async s3LsDir(dir, bucketName, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		AWS.config.update({
+			accessKeyId: 'YOUR_ACCESS_KEY_ID',
+			secretAccessKey: 'YOUR_SECRET_ACCESS_KEY'
+		});
+		  
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
+		
 		let params = {
 				Bucket: bucketName,
 				Prefix: dir
 		};
+
 		return new Promise((resolve, reject) => {
-				s3.listObjectsV2(params, function(err, data) {
-				if (err) reject(err);
-				else {
-						let objects = data.Contents.map(obj => {
-						return {
-								key: obj.Key,
-								last_modified: moment(obj.LastModified).unix(),
-								size: obj.Size,
-								e_tag: obj.ETag
-						};
-						});
-						resolve(objects);
-				}
+			this.s3.listObjectsV2(params, function(err, data) {
+			if (err) reject(err);
+			else {
+				let objects = data.Contents.map(obj => {
+					return {
+						key: obj.Key,
+						last_modified: moment(obj.LastModified).unix(),
+						size: obj.Size,
+						e_tag: obj.ETag
+					};
 				});
+				resolve(objects);
+			}
+			});
 		});
-		}
+	}
 
 	async s3RmDir(dir, bucket, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let params = {
 				Bucket: bucket,
 				Prefix: dir
@@ -171,8 +191,8 @@ export class s3Kit {
 		}
 		
 	async s3CpDir(srcPath, dstPath, bucket, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let params = {
 			Bucket: bucket,
 			Prefix: srcPath
@@ -208,8 +228,8 @@ export class s3Kit {
 	}
 	
 	async s3MvDir(srcPath, dstPath, bucket, kwargs) {
-			let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-			let s3 = new AWS.S3(this.configToBoto(s3Config));
+			let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+			let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 			let params = {
 				Bucket: bucket,
 				Prefix: srcPath
@@ -251,8 +271,8 @@ export class s3Kit {
 		}
 		
 	async s3DlDir(remotePath, localPath, bucket, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let params = {
 			Bucket: bucket,
 			Prefix: remotePath
@@ -289,8 +309,8 @@ export class s3Kit {
 	}
 	
 	async s3UlDir(localPath, remotePath, bucket, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let files = fs.readdirSync(localPath).map(file => path.join(localPath, file));
 		let results = {};
 		let uploadPromises = files.map(uploadFile => {
@@ -318,8 +338,8 @@ export class s3Kit {
 	}
 
 	async s3LsFile(filekey, bucket, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let params = {
 			Bucket: bucket,
 			Prefix: filekey
@@ -347,8 +367,8 @@ export class s3Kit {
 	}
 
 	async s3RmFile(thisPath, bucket, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let params = {
 			Bucket: bucket,
 			Key: thisPath
@@ -369,8 +389,8 @@ export class s3Kit {
 	}
 		
 	async s3CpFile(srcPath, dstPath, bucket, kwargs) {
-		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.config;
-		let s3 = new AWS.S3(this.configToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let params = {
 			Bucket: bucket,
 			CopySource: `${bucket}/${srcPath}`,
@@ -392,8 +412,8 @@ export class s3Kit {
 	}
 
 	async s3MvFile(srcPath, dstPath, bucket, kwargs = {}) {
-		const s3Config = kwargs.s3cfg || this.config;
-		const s3 = new AWS.S3(this.configToBoto(s3Config));
+		const s3Config = kwargs.s3cfg || this.s3cfg;
+		const s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		const copyParams = {
 			Bucket: bucket,
 			CopySource: `${bucket}/${srcPath}`,
@@ -414,8 +434,8 @@ export class s3Kit {
 	}
 		
 	async s3DlFile(remotePath, localPath, bucket, kwargs = {}) {
-		const s3Config = kwargs.s3cfg || this.config;
-		const s3 = new AWS.S3(this.configToBoto(s3Config));
+		const s3Config = kwargs.s3cfg || this.s3cfg;
+		const s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		if (remotePath.includes('s3://')) {
 			remotePath = remotePath.replace('s3://', '').replace(`${bucket}/`, '');
 		}
@@ -436,8 +456,8 @@ export class s3Kit {
 
 
 	async s3UlFile(uploadFile, path, bucket, kwargs = {}) {
-		const s3Config = kwargs.s3cfg || this.config;
-		const s3 = new AWS.S3(this.configToBoto(s3Config));
+		const s3Config = kwargs.s3cfg || this.s3cfg;
+		const s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		let fileData;
 		let fileExtension;
 		if (fs.existsSync(uploadFile)) {
@@ -473,8 +493,8 @@ export class s3Kit {
 	}
 		
 	async s3MkDir(path, bucket, kwargs = {}) {
-		const s3Config = kwargs.s3cfg || this.config;
-		const s3 = new AWS.S3(this.configToBoto(s3Config));
+		const s3Config = kwargs.s3cfg || this.s3cfg;
+		const s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
 		const params = {
 			Bucket: bucket,
 			Key: path,
@@ -598,7 +618,7 @@ export class s3Kit {
 
 	async getSession(s3Config) {
 		if (!this.session) {
-			this.session = new AWS.S3(this.configToBoto(s3Config));
+			this.session = new AWS.S3(this.s3cfgToBoto(s3Config));
 		}
 		return this.session;
 	}
@@ -610,7 +630,7 @@ export class s3Kit {
 				secretAccessKey: s3Config['secretKey'],
 				endpoint: s3Config['endpoint']
 			};
-			this.config = results;
+			this.s3cfg = results;
 			return results;
 		} else if (Object.keys(s3Config).includes('aws_access_key_id')) {
 			const results = {
@@ -618,7 +638,7 @@ export class s3Kit {
 				secretAccessKey: s3Config['aws_secret_access_key'],
 				endpoint: s3Config['endpoint_url']
 			};
-			this.config = results;
+			this.s3cfg = results;
 			return results;
 		} else {
 			throw new Error("s3_config must contain accessKey, secretKey, and endpoint");
@@ -626,6 +646,15 @@ export class s3Kit {
 	}
 
 	async test() {
+		try{
+			let s3LsDir = await this.s3LsDir('', 'swissknife-models');
+		}
+		catch(err){
+			console.log(err);
+		}
+	}
+
+	async test1() {
 		const endpoint = "https://object.ord1.coreweave.com";
 		const accessKey = "OVEXCZJJQPUGXZOV";
 		const secretKey = "H1osbJRy3903PTMqyOAGD6MIohi4wLXGscnvMEduh10";
@@ -636,13 +665,13 @@ export class s3Kit {
 			secretKey: secretKey,
 			endpoint: endpoint,
 		};
-		this.configToBoto(config);
+		this.s3cfgToBoto(config);
 		const s3 = this.getSession(config);
 		const params = {
 			Bucket: bucket,
 			Prefix: dir
 		};
-		const data = await thiss3.listObjectsV2(params).promise();
+		const data = await s3.listObjectsV2(params).promise();
 		const directory = {};
 		data.Contents.forEach((obj) => {
 			directory[obj.Key] = {
@@ -710,9 +739,15 @@ export class s3Kit {
 
 async function main() {
 		const testThis = new s3Kit();
-		await testThis.test();
-		await testThis.test2();
-		await testThis.test3();
+// 		await testThis.test1();
+// 		await testThis.test2();
+// 		await testThis.test3(); 
 }
 
-//main();
+async function test() {
+	const testThis = new s3Kit();
+	await testThis.test();
+}
+
+// test();
+// main();
