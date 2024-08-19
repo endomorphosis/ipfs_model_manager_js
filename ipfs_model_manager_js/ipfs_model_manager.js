@@ -22,7 +22,7 @@ const moveFile = util.promisify(fs.rename);
 const rimrafAsync = util.promisify(rimraf);
 const tmpFile = new temp_file.TempFileManager()
 
-class ipfsModelManager {
+export class ipfsModelManager {
     constructor(resources = null, meta = null) {
         this.thisDir = path.dirname(import.meta.url);
         if (this.thisDir.startsWith("file://")) {
