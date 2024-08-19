@@ -19,7 +19,6 @@ const readFile = util.promisify(fs.readFile);
 const writeFile = util.promisify(fs.writeFile);
 const stat = util.promisify(fs.stat);
 const moveFile = util.promisify(fs.rename);
-const rimrafAsync = util.promisify(rimraf);
 const tmpFile = new temp_file.TempFileManager()
 
 export class ipfsModelManager {
