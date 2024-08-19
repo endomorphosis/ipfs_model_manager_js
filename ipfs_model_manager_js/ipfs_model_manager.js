@@ -10,7 +10,6 @@ import * as s3Kit from './s3_kit.js';
 // import * as install_ipfs from './ipfs_kit_lib/install_ipfs.js';
 import fsExtra from 'fs-extra';
 import crypto from 'crypto';
-import rimraf from 'rimraf';
 import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
 import { execSync } from 'child_process';
@@ -1663,7 +1662,7 @@ class ipfsModelManager {
     async evictLocal(model, kwargs = {}) {
         const localModelPath = path.join(this.localPath, model);
         if (fs.existsSync(localModelPath)) {
-            rimraf.sync(localModelPath);
+            // rimraf.sync(localModelPath);
         }
         return true;
     }
