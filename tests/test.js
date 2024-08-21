@@ -62,6 +62,11 @@ export default class testIpfsModelManager {
         else{
             // this.config = new requireConfig();
         }
+        for (let key in this.config) {
+            if (!Object.keys(meta).includes(key)) {
+                meta[key] = this.config[key];
+            }
+        }
 
         this.modelManager = new ipfsModelManager(null, meta);
     }
