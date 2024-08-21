@@ -51,12 +51,14 @@ export class s3Kit {
 			}
 		}
 		this.s3 = new AWS.S3(this.s3cfg);
-		this.s3.config.update({
-			accessKeyId: this.s3cfg.accessKey,
-			secretAccessKey: this.s3cfg.secretKey,
-			endpoint: this.s3cfg.endpoint,
-			s3ForcePathStyle: true
-		});
+		if (this.s3cfg) {
+			this.s3.config.update({
+				accessKeyId: this.s3cfg.accessKey,
+				secretAccessKey: this.s3cfg.secretKey,
+				endpoint: this.s3cfg.endpoint,
+				s3ForcePathStyle: true
+			});
+		}
 	}
 
 	call(method, kwargs) {
