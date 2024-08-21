@@ -1,6 +1,5 @@
-import { rawListeners } from "npm";
 import { ipfsModelManager } from "../ipfs_model_manager_js/ipfs_model_manager.js";
-
+import { requireConfig } from "../config_js/config.js";
 export default class testIpfsModelManager {
     constructor() {
 
@@ -52,6 +51,18 @@ export default class testIpfsModelManager {
             //"localPath": localPath,
             //"ipfs_path": ipfs_path
         };
+        this.thisDir = path.dirname(import.meta.url);
+        if (this.thisDir.startsWith("file://")) {
+            this.thisDir = this.thisDir.replace("file://", "");
+        }
+        this.parentDir = path.dirname(this.thisDir);
+        if (fs.existsSync(path.join(this.parentDir, "config", "config.toml"))) {
+            this.config = new requireConfig({config: path.join(this.parentDir, "config", "config.toml")});
+        }
+        else{
+            // this.config = new requireConfig();
+        }
+
         this.modelManager = new ipfsModelManager(null, meta);
     }
 
