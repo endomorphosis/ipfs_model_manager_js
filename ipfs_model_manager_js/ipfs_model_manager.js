@@ -280,7 +280,7 @@ export class ipfsModelManager {
     
         try {
             let thisTempFile = await new Promise((resolve, reject) => {
-                tmpFile.createTempFile({  postfix: '.json', dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
+                this.tmpFile.createTempFile({  postfix: '.json', dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
                     if (err) {
                         reject(err);
                     } else {
@@ -664,10 +664,17 @@ export class ipfsModelManager {
             }
             if (s3Timestamp === null) {
                 let s3File = path.basename(this.collectionCache.s3);
-                let s3Dir = path.dirname(this.collectionCache.s3);
-                s3Timestamp = await this.s3Kit.s3_ls_file(s3File, s3Dir);
-                let key = Object.keys(s3Timestamp)[0];
-                s3Timestamp = s3Timestamp[key].last_modified;
+                let s3Dir = this.collectionCache.s3.split("/")[2];
+                if (this.config !== null && this.config.hasOwnProperty('s3') && this.config.s3 !== null && this.config.s3.hasOwnProperty('bucket')) {
+                    s3Dir = this.config.s3.bucket;
+                }
+                let s3LsFile = await this.s3Kit.s3LsFile(s3File, s3Dir);
+                if (s3LsFile !== null && s3LsFile !== false) {
+                    let key = Object.keys(s3LsFile)[0];
+                    if (s3LsFile[key].hasOwnProperty('last_modified')) {
+                        s3Timestamp = s3LsFile[key].last_modified;
+                    }
+                }
             }
         }
 
@@ -695,10 +702,10 @@ export class ipfsModelManager {
             local: localTimestamp,
             https: https_timestamp
         };
-
+        let newest = null;
         if (!Object.values(timestamps).every(v => v === null)) {
             timestamps = Object.fromEntries(Object.entries(timestamps).filter(([k, v]) => v !== null));
-            let newest = Object.keys(timestamps).reduce((a, b) => timestamps[a] > timestamps[b] ? a : b);
+            newest = Object.keys(timestamps).reduce((a, b) => timestamps[a] > timestamps[b] ? a : b);
         } else {
             throw new Error("No collection cache found");
         }
@@ -734,7 +741,7 @@ export class ipfsModelManager {
 
         let thisModel = null;
 
-        if (modelData[newest] !== null) {
+        if (newest != null && modelData[newest] !== null) {
             if (modelData[newest].hwRequirements.diskUsage > os.freemem()) {
                 throw new Error("Not enough disk space to download model");
             } else {
@@ -1104,7 +1111,7 @@ export class ipfsModelManager {
 
 
     async autoDownload(manifest, kwargs) {
-        let lsModels = this.lsModels();
+        let lsModels = await this.lsModels();
         let thisModelManifest = manifest;
         this.historyModels[thisModelManifest["id"]] = Date.now();
         let thisModelManifestCache = thisModelManifest["cache"];
@@ -1136,7 +1143,7 @@ export class ipfsModelManager {
         try {
             ipfsTest = false;
             let thisTempFile = await new Promise((resolve, reject) => {
-                tmpFile.createTempFile({ postfix: '.md' , dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
+                this.tmpFile.createTempFile({ postfix: '.md' , dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
                     if (err) {
                         reject(err);
                     } else {
@@ -1146,7 +1153,7 @@ export class ipfsModelManager {
             });
 
             if ("/README.md" in Object.keys(thisModelManifestCache["ipfs"])) {
-                let ipfsTest_file = await this.download_ipfs(thisModelManifestCache["ipfs"]["/README.md"]["path"], this_temp_file.name);
+                let ipfsTest_file = await this.downloadIpfs(thisModelManifestCache["ipfs"]["/README.md"]["path"], this_temp_file.name);
                 let ipfsTest = fs.readFileSync(ipfsTest_file, 'utf8');
                 ipfsTest = ipfsTest.length > 0;
             }
@@ -1159,7 +1166,7 @@ export class ipfsModelManager {
         // S3 test
         try {
             let thisTempFile = await new Promise((resolve, reject) => {
-                tmp.createTempFile({ postfix: '.md' , dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
+                this.tmpFile.createTempFile({ postfix: '.md' , dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
                     if (err) {
                         reject(err);
                     } else {
@@ -1170,9 +1177,9 @@ export class ipfsModelManager {
             if ("/README.md" in Object.keys(thisModelManifestCache["s3"])) {
                 let s3Test;
                 if (thisModelManifestCache["s3"]["/README.md"]["url"].startsWith("s3://")) {
-                    s3Test = await this.download_s3(thisModelManifestCache["s3"]["/README.md"]["url"], this_temp_file.name);
+                    s3Test = await this.downloadS3(thisModelManifestCache["s3"]["/README.md"]["url"], this_temp_file.name);
                 } else {
-                    s3Test = await this.download_s3(thisModelManifestCache["s3"]["/README.md"]["path"], this_temp_file.name);
+                    s3Test = await this.downloadS3(thisModelManifestCache["s3"]["/README.md"]["path"], this_temp_file.name);
                 }
                 s3Test = s3Test.toString();
                 if (!s3Test.includes("error")) {
@@ -1191,7 +1198,7 @@ export class ipfsModelManager {
         // HTTPS test
         try {
             let thisTempFile = await new Promise((resolve, reject) => {
-                tmpFile.createTempFile({ postfix: '.md' , dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
+                this.tmpFile.createTempFile({ postfix: '.md' , dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
                     if (err) {
                         reject(err);
                     } else {
@@ -1201,7 +1208,7 @@ export class ipfsModelManager {
             });
             if ("/README.md" in Object.keys(thisModelManifestCache["https"])) {
                 let https_url = thisModelManifestCache["https"]["/README.md"]["url"];
-                let httpsTest_file = await this.download_https(https_url, this_temp_file.name);
+                let httpsTest_file = await this.downloadHttps(https_url, this_temp_file.name);
                 let httpsTest = fs.readFileSync(httpsTest_file, 'utf8');
                 httpsTest = httpsTest.length > 0;
             }

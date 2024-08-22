@@ -338,6 +338,9 @@ export class s3Kit {
 		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
 		const newConfig = await this.s3cfgToBoto(s3Config);
 		const s3 = new AWS.S3(newConfig);
+		if (bucket.includes('s3://')) {
+			bucket = bucket.replace('s3://', '');
+		}
 		let params = {
 			Bucket: bucket,
 			Prefix: filekey

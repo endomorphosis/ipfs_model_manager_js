@@ -83,7 +83,7 @@ export default class testIpfsModelManager {
         await this.modelManager.checkZombies();
         await this.modelManager.checkExpired();
         await this.modelManager.checkNotFound();
-        // this.download_model('gte-small');
+        await this.modelManager.downloadModel('gte-small');
         // this.download_model('stablelm-zephyr-3b-GGUF-Q2_K');
         await this.modelManager.downloadMissing();
         await this.modelManager.evictExpiredModels();
