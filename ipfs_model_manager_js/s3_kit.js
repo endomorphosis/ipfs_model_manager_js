@@ -127,9 +127,8 @@ export class s3Kit {
 		
 	async s3LsDir(dir, bucketName, kwargs) {
 		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
-		  
-		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
-		
+		const newConfig = await this.s3cfgToBoto(s3Config);
+		const s3 = new AWS.S3(newConfig);
 		let params = {
 				Bucket: bucketName,
 				Prefix: dir
@@ -337,7 +336,8 @@ export class s3Kit {
 
 	async s3LsFile(filekey, bucket, kwargs) {
 		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
-		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
+		const newConfig = await this.s3cfgToBoto(s3Config);
+		const s3 = new AWS.S3(newConfig);
 		let params = {
 			Bucket: bucket,
 			Prefix: filekey
@@ -366,7 +366,8 @@ export class s3Kit {
 
 	async s3RmFile(thisPath, bucket, kwargs) {
 		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
-		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
+		const newConfig = await this.s3cfgToBoto(s3Config);
+		const s3 = new AWS.S3(newConfig);
 		let params = {
 			Bucket: bucket,
 			Key: thisPath
@@ -388,7 +389,8 @@ export class s3Kit {
 		
 	async s3CpFile(srcPath, dstPath, bucket, kwargs) {
 		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
-		let s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
+		const newConfig = await this.s3cfgToBoto(s3Config);
+		const s3 = new AWS.S3(newConfig);
 		let params = {
 			Bucket: bucket,
 			CopySource: `${bucket}/${srcPath}`,
@@ -410,8 +412,9 @@ export class s3Kit {
 	}
 
 	async s3MvFile(srcPath, dstPath, bucket, kwargs = {}) {
-		const s3Config = kwargs.s3cfg || this.s3cfg;
-		const s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		const newConfig = await this.s3cfgToBoto(s3Config);
+		const s3 = new AWS.S3(newConfig);
 		const copyParams = {
 			Bucket: bucket,
 			CopySource: `${bucket}/${srcPath}`,
@@ -432,8 +435,9 @@ export class s3Kit {
 	}
 		
 	async s3DlFile(remotePath, localPath, bucket, kwargs = {}) {
-		const s3Config = kwargs.s3cfg || this.s3cfg;
-		const s3 = new AWS.S3(this.s3cfgToBoto(s3Config));
+		let s3Config = kwargs && kwargs.s3cfg ? kwargs.s3cfg : this.s3cfg;
+		const newConfig = await this.s3cfgToBoto(s3Config);
+		const s3 = new AWS.S3(newConfig);
 		if (remotePath.includes('s3://')) {
 			remotePath = remotePath.replace('s3://', '').replace(`${bucket}/`, '');
 		}
@@ -638,25 +642,18 @@ export class s3Kit {
 			};
 			this.s3cfg = results;
 			return results;
-		} else {
+		} else if (Object.keys(s3Config).includes('accessKeyId')) {
+			const results = {
+				accessKeyId: s3Config['accessKeyId'],
+				secretAccessKey: s3Config['secretAccessKey'],
+				endpoint: s3Config['endpoint']
+			};
+			this.s3cfg = results;
+			return results;
+		}
+		else {
 			throw new Error("s3_config must contain accessKey, secretKey, and endpoint");
 		}
 	}
 
 }
-
-
-async function main() {
-		const testThis = new s3Kit();
-// 		await testThis.test1();
-// 		await testThis.test2();
-// 		await testThis.test3(); 
-}
-
-async function test() {
-	const testThis = new s3Kit();
-	await testThis.test();
-}
-
-test();
-// main();

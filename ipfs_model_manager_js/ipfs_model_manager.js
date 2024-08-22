@@ -420,53 +420,55 @@ export class ipfsModelManager {
             }
         }
         try{
-            thisTempFile = await new Promise((resolve, reject) => {
+            let thisTempFile = await new Promise((resolve, reject) => {
                 this.tmpFile.createTempFile({postfix:suffix, dir: '/tmp'}).then((results) => {
                     // console.log(results);
                     tmpFilename = results.tempFilePath.split("/").pop();
-                    let thisFileKey = s3Src.split(s3cfg["bucket"] + "/")[1];
+                    let bucket = this.s3cfg["bucket"];
+                    let thisFileKey = s3Src.split("/").slice(3).join("/");
 
                     let params = {
-                        Bucket: s3cfg["bucket"],
+                        Bucket: this.s3cfg["bucket"],
                         Key: thisFileKey
                     };
-    
-                    let file = fs.createWriteStream(thisTempFile.name);
-                    let stream = s3.getObject(params).createReadStream().pipe(file);
-    
-                    stream.on('finish', resolve);
-                    stream.on('error', reject);    
-    
+                    this.s3Kit.s3DlFile(thisFileKey, results.tempFilePath, this.s3cfg["bucket"]).then((results) => {
+                        resolve({ name: results.tempFilePath, fd: results.fd, removeCallback: results.cleanupCallback });
+                    }).catch((e) => {
+                        reject(e);
+                    });
+   
                 }).catch((e) => {
                     reject(e);
                 });
             });
+        
+            if (fs.existsSync(dstPath)) {
+                fs.rmSync(dstPath);
+            }
+    
+            if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
+                fs.renameSync(thisTempFile.name, dstPath);
+                if (fs.existsSync(thisTempFile.name)) {
+                    fs.rmSync(thisTempFile.name);
+                }
+            } else {
+                fs.copyFileSync(thisTempFile.name, dstPath);
+                if (fs.existsSync(thisTempFile.name)) {
+                    fs.rmSync(thisTempFile.name);
+                }
+            }
+    
+            if (thisTempFile.removeCallback != undefined && typeof thisTempFile.removeCallback === 'function') {
+                thisTempFile.removeCallback();
+            }
+    
+            return dstPath;
+        
         }
         catch(e){
             console.log(e);
         }
 
-        if (fs.existsSync(dstPath)) {
-            fs.rmSync(dstPath);
-        }
-
-        if (!dstPath.includes("collection.json") && !dstPath.includes("README.md")) {
-            fs.renameSync(thisTempFile.name, dstPath);
-            if (fs.existsSync(thisTempFile.name)) {
-                fs.rmSync(thisTempFile.name);
-            }
-        } else {
-            fs.copyFileSync(thisTempFile.name, dstPath);
-            if (fs.existsSync(thisTempFile.name)) {
-                fs.rmSync(thisTempFile.name);
-            }
-        }
-
-        if (thisTempFile.removeCallback != undefined && typeof thisTempFile.removeCallback === 'function') {
-            thisTempFile.removeCallback();
-        }
-
-        return dstPath;
     }
 
     async downloadS3_bak(s3Src, filenameDst, kwargs) {
