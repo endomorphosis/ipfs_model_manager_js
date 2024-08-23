@@ -1142,42 +1142,27 @@ export class ipfsModelManager {
         // IPFS test
         try {
             ipfsTest = false;
-            try{
-                let suffix = 'md';
-                thisTempFile = await new Promise((resolve, reject) => {
-                    this.tmpFile.createTempFile({postfix:suffix, dir: '/tmp'}).then((tmpFileResults) => {         
-                        let ipfsResults = this.ipfsKitJs.ipgetDownloadObject(thisModelManifestCache["ipfs"]["/README.md"]["path"], tmpFileResults.tempFilePath,  { timeout: 10000 }).then((ipGetResults) => {
-                            if (ipGetResults.path) {                              
-                                if (fs.existsSync(ipGetResults.tempFilePath) && fs.lstatSync(ipGetResults.tempFilePath).isFile() && fs.statSync(ipGetResults.tempFilePath).size > 0) {
-                                    resolve({ name: tmpFileResults.tempFilePath, fd: tmpFileResults.fd, removeCallback: tmpFileResults.cleanupCallback });
-                                }
-                                else{
-                                    console.log("No path in results or timeout")
-                                    reject("File not found");
-                                }
-                            } else {
-                                console.log("No path in results or timeout")
-                                reject("No path in results or timeout");
-                                // throw new Error("No path in results or timeout");
-                            }
-                        }).catch((e) => {
-                            console.log(e);
-                            reject(e);
-                        });
-                    }).catch((e) => {
-                        console.log(e);
-                        reject(e);
-                    });
+            let thisTempFile = await new Promise((resolve, reject) => {
+                this.tmpFile.createTempFile({ postfix: '.md' , dir: '/tmp' }, (err, path, fd, cleanupCallback) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve({ name: path, fd, removeCallback: cleanupCallback });
+                    }
                 });
-            }
-            catch(e){
-                console.log(e);
+            });
+
+            if ("/README.md" in Object.keys(thisModelManifestCache["ipfs"])) {
+                let ipfsTest_file = await this.downloadIpfs(thisModelManifestCache["ipfs"]["/README.md"]["path"], this_temp_file.name);
+                let ipfsTest = fs.readFileSync(ipfsTest_file, 'utf8');
+                ipfsTest = ipfsTest.length > 0;
             }
         } catch (e) {
             ipfsTest = e;
         }
 
         let timestamp_1 = Date.now();
+
         // S3 test
         try {
             let thisTempFile = await new Promise((resolve, reject) => {
