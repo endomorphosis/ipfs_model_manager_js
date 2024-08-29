@@ -1,11 +1,22 @@
-import { ipfsModelManager } from "../ipfs_model_manager_js/ipfs_model_manager.js";
+import ipfsModelManagerJs from ipfs_model_manager_js
+import libp2pKitJs from libp2p_kit_js
+import orbitDBKitJs from orbit_db_kit_js
+import ipfsFaissJs from ipfs_faiss_js
+import storachaKitJs from storacha_kit_js
+import fireproofDbKitJs from fireproofdb_kit_js
 import { requireConfig } from "../config/config.js";
-import { s3Kit } from "../ipfs_model_manager_js/s3_kit.js";
 import fs from "fs";
 import path from "path";
 
 export default class testIpfsModelManager {
     constructor() {
+        this.ipfsModelManager = new ipfsModelManagerJs(resources, metadata)
+        this.orbitDbKit = new orbitDBKitJs(resources, metadata)
+        this.ipfsFaiss = new ipfsFaissJs(resources, metadata)
+        this.libp2pKit = new libp2pKitJs(resources, metadata)
+        this.ipfsKit = new ipfsKitJs(resources, metadata)
+        this.storachaKit = new storachaKitJs(resources, metadata)
+        this.fireproofDbKit = new fireproofDbKitJs(resources, metadata)
         const endpoint = "https://object.ord1.coreweave.com"
         const access_key = "CWVFBNRZEEDYTAUM"
         const secret_key = "cwoBNj1ILmRGxcm18EsWE5Qth4hVtmtNJPkLVW2AETU"
@@ -70,25 +81,269 @@ export default class testIpfsModelManager {
         this.modelManager = new ipfsModelManager(null, meta);
     }
 
+
+    async init() {
+        let test_libp2p_kit;
+        let test_orbit_db_kit;
+        let test_ipfs_faiss;
+        let test_ipfs_kit;
+        let test_storacha_kit;
+        let test_fireproof_db_kit;
+        let test_ipfs_model_manager;
+
+        try{
+            test_libp2p_kit = await this.libp2pKit.init()
+        }
+        catch(err){
+            console.log(err);
+            test_libp2p_kit = err;
+        }
+
+        try {
+            test_ipfs_kit = await this.ipfsKit.init()
+        }
+        catch(err){
+            console.log(err);
+            test_ipfs_kit = err;
+        }
+
+        try{
+            test_orbit_db_kit = await this.orbitDbKit.init(this.libp2pKit,this.ipfsKit)
+        }
+        catch(err){
+            console.log(err);
+            test_orbit_db_kit = err;
+        }
+
+        try{
+            test_ipfs_faiss = await this.ipfsFaiss.init()
+        }
+        catch(err){
+            console.log(err);
+            test_ipfs_faiss = err
+        }
+
+        try{
+            test_storacha_kit = await this.storachaKit.init()
+        }
+        catch(err){
+            console.log(err);
+            test_storacha_kit = err
+        }
+
+        try{
+            test_fireproof_db_kit = await this.fireproofDbKit.init()
+        }
+        catch(err){
+            console.log(err);
+            test_fireproof_db_kit = err
+        }
+
+        try{
+            test_ipfs_model_manager = await this.ipfsModelManager.init(this.libp2pKit, this.ipfsKit, this.orbitDbKit, this.storachaKit, this.fireproofDbKit, this.ipfsFaiss)
+        }
+        catch(err){
+            console.log(err);
+            test_ipfs_model_manager = err
+        }
+
+        const results = {
+            test_libp2p_kit: test_libp2p_kit,
+            test_orbit_db_kit: test_orbit_db_kit,
+            test_ipfs_faiss: test_ipfs_faiss,
+            test_ipfs_kit: test_ipfs_kit,
+            test_storacha_kit: test_storacha_kit,
+            test_fireproof_db_kit: test_fireproof_db_kit,
+            test_ipfs_model_manager: test_ipfs_model_manager
+        }
+
+        return results;
+    }
+
     async test(kwargs = {}) {
-        await this.modelManager.loadCollectionCache();
-        // await this.state();
-        // await this.state({src: "s3"});
-        await this.modelManager.state({src: "local"});
-        // await this.state({src: "ipfs"});
-        // await this.state({src: "https"});
-        await this.modelManager.checkPinnedModels();
-        await this.modelManager.checkHistoryModels();
-        await this.modelManager.randHistory();
-        await this.modelManager.checkZombies();
-        await this.modelManager.checkExpired();
-        await this.modelManager.checkNotFound();
-        await this.modelManager.downloadModel('gte-small');
-        // this.download_model('stablelm-zephyr-3b-GGUF-Q2_K');
-        await this.modelManager.downloadMissing();
-        await this.modelManager.evictExpiredModels();
-        // await this.evictZombies();
-        return this;
+
+        await this.libp2pKit.test()
+        await this.ipfsKit.test()
+        await this.orbitDbKit.test()
+        await this.ipfsFaiss.test()
+        await this.storachaKit.test()
+        await this.fireproofDbKit.test()
+        await this.ipfsModelManager.test(kwargs)
+    }
+
+    async test_state() {
+        let test_state = {};
+        try {
+            test_state.state = await this.ipfsModelManager.state()
+        }
+        catch(err){
+            console.log(err);
+            test_state.state = err;
+            try{
+                test_state.local =  await this.ipfsModelManager.state({src: "local"});
+            }
+            catch(err){
+                console.log(err);
+                test_state.local = err;
+            }
+            try{
+                test_state.s3Kit =  await this.ipfsModelManager.state({src: "s3"});
+            }
+            catch(err){
+                console.log(err);
+                test_state.s3Kit = err;
+            }
+            try{
+                test_state.ipfs =  await this.ipfsModelManager.state({src: "ipfs"});
+            }   
+            catch(err){
+                console.log(err);
+                test_state.ipfs = err;
+            }
+            try{
+                test_state.https =  await this.ipfsModelManager.state({src: "https"});
+            }
+            catch(err){
+                console.log(err);
+                test_state.https = err;
+            }
+            try{
+                test_state.orbitDbKit =  await this.orbitDbKit.state({src: "orbitdb"});
+            }
+            catch(err){
+                console.log(err);
+                test_state.orbitDbKit = err;
+            }
+        }
+        return test_state;
+    }
+
+
+    async test_asserts() {
+        let asserts = {};
+
+        try {
+            asserts.randHistory = await this.modelManager.randHistory();
+        }
+        catch(err){
+            console.log(err);
+            asserts.randHistory = err;
+        }
+
+        try{      
+            asserts.downloadModel = await this.modelManager.downloadModel('gte-small');
+        }
+        catch(err){
+            console.log(err);
+            asserts.downloadModel = err;
+        }
+        try{
+            asserts.rmModel = await this.modelManager.rmModel('gte-small');
+        }
+        catch(err){
+            console.log(err);
+            asserts.rmModel = err;
+        }
+
+        try{
+            asserts.evictExpiredModels = await this.modelManager.evictExpiredModels();
+        }
+        catch(err){
+            console.log(err);
+            asserts.evictExpiredModels = err;
+        }
+
+        try{
+            asserts.evictZombies = await this.modelManager.evictZombies();
+        }
+        catch(err){
+            console.log(err);
+            asserts.evictZombies = err;
+        }
+
+        try{
+            asserts.downloadMissing = await this.modelManager.downloadMissing();
+        }
+        catch(err){
+            console.log(err);
+            asserts.downloadMissing = err;
+        }
+
+        return asserts;
+
+    }
+
+    async test() {
+        let test_results = {};
+        try{
+            test_results.state = await this.test_state();
+        }
+        catch(err){
+            console.log(err);
+            test_results.state = err;
+        }
+
+        try{
+            test_results.collectionCache = await this.modelManager.loadCollectionCache();
+        }
+        catch(err){
+            console.log(err);
+            test_results.collectionCache = err;
+        }
+
+        try{
+            test_results.collection = await this.modelManager.loadCollection();
+        }
+        catch(err){
+            console.log(err);
+            test_results.collection = err;
+        }
+        try{
+            test_results.checkPinnedModels = await this.modelManager.checkPinnedModels();
+        }
+        catch(err){
+            console.log(err);
+            test_results.checkPinnedModels = err;
+        }
+        try{
+            test_results.checkHistoryModels = await this.modelManager.checkHistoryModels();
+        }
+        catch(err){
+            console.log(err);
+            test_results.checkHistoryModels = err;
+        }
+
+        try {
+            test_results.checkZombies = await this.modelManager.checkZombies();
+        }
+        catch(err){
+            console.log(err);
+            test_results.checkZombies = err;
+        }
+        try{
+            test_results.checkExpired = await this.modelManager.checkExpired();
+        }
+        catch(err){
+            console.log(err);
+            test_results.checkExpired = err;
+        }
+        try{
+            test_results.checkNotFound = await this.modelManager.checkNotFound();
+        }
+        catch(err){
+            console.log(err);
+            test_results.checkNotFound = err;
+        }
+
+        try{
+            test_results.test_asserts = await this.modelManager.test_asserts();
+        }
+        catch(err){
+            console.log(err);
+            test_results.test_asserts = err;
+        }
+
+        return test_results;
     }
 }
 
@@ -255,7 +510,7 @@ export class testS3Kit {
 
 
 if (import.meta.url === 'file://' + process.argv[1]) {
-    const testIpfs = new testIpfsModelManager();
+    const testModelManager = new testIpfsModelManager();
     const testS3 = new testS3Kit();
     try{
         await testS3.test().then((result) => {
@@ -265,10 +520,16 @@ if (import.meta.url === 'file://' + process.argv[1]) {
             throw error;
         });
 
-        await testIpfs.test().then((result) => {
-            console.log("testIpfsModelManager: ", result);
+        await testModelManager.init().then((init) => {
+            console.log("testIpfsModelManager init: ", init);
+            testModelManager.test().then((result) => {
+                console.log("testIpfsModelManager: ", result);
+            }).catch((error) => {
+                console.log("testIpfsModelManager error: ", error);
+                throw error;
+            });
         }).catch((error) => {
-            console.log("testIpfsModelManager error: ", error);
+            console.error("testIpfsModelManager init error: ", error);
             throw error;
         });
 

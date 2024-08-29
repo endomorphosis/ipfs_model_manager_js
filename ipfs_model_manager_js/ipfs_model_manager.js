@@ -209,23 +209,45 @@ export class ipfsModelManager {
         }
     }
 
-    async init(){
-        await this.ipfsKitJs.ipfsKitStop().then((results) => {
+    async init(libp2pKit, ipfsKit, orbitDbKit, storachaKit, fireproofDbKit, ipfsFaiss){
+        this.libp2pKit = libp2pKit;
+        this.ipfsKit = ipfsKit;
+        this.orbitDbKit = orbitDbKit;
+        this.storachaKit = storachaKit;
+        this.fireproofDbKit = fireproofDbKit;
+        this.ipfsFaiss = ipfsFaiss;
+
+        let initIpfsKitStop, initIpfsKitStart, initOrbitDbKit, initStorachaKit, initFireproofDbKit, initIpfsFaiss; 
+
+        await this.ipfsKit.ipfsKitStop().then((results) => {
+            initIpfsKit = results;
+            console.log(results);
+        }).catch((e) => {
+            initIpfsKit = e;
+            console.log(e);
+        });
+
+        await this.ipfsKit.ipfsKitStart().then((results) => {
             console.log(results);
         }).catch((e) => {
             console.log(e);
         });
-        await this.ipfsKitJs.ipfsKitStart().then((results) => {
+        await this.orbitDbKit.orbitdbStop().then((results) => {
             console.log(results);
         }).catch((e) => {
             console.log(e);
         });
-        await this.orbitdbKit.orbitdbStop().then((results) => {
+        await this.orbitDbKit.orbitdbStart().then((results) => {
             console.log(results);
         }).catch((e) => {
             console.log(e);
         });
-        await this.orbitdbKit.orbitdbStart().then((results) => {
+        await this.fireproofDbKit.fireproofDbStop().then((results) => {
+            console.log(results);
+        }).catch((e) => {
+            console.log(e);
+        });
+        await this.fireproofDbKit.fireproofDbStart().then((results) => {
             console.log(results);
         }).catch((e) => {
             console.log(e);
@@ -233,7 +255,7 @@ export class ipfsModelManager {
         let executeReady = false;
         while (executeReady != true) {
             try {
-                let readyIpfsKit = await this.ipfsKitJs.ipfsKitReady().then(
+                let readyIpfsKit = await this.ipfsKit.ipfsKitReady().then(
                     (results) => {
                         executeReady = results;
                     }
