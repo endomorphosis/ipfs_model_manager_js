@@ -3,16 +3,16 @@ import os from 'os';
 import path from 'path';
 import util from 'util';
 import { promisify } from 'util';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
+import ipfsHuggingfaceScraper from  'ipfs_huggingface_scraper_js';
+import orbitdbKit from 'orbitdb_kit';
 import * as testFio from './test_fio.js';
 import * as s3Kit from './s3_kit.js';
-// import * as install_ipfs from './ipfs_kit_lib/install_ipfs.js';
 import fsExtra from 'fs-extra';
 import crypto from 'crypto';
 import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
-import { execSync } from 'child_process';
 import { requireConfig } from '../config/config.js';
 
 const readFile = util.promisify(fs.readFile);
@@ -39,17 +39,20 @@ export class ipfsModelManager {
             "s3_models": [],
             "ipfs_models": [],
             "local_models": [],
-            "https_models": []
+            "https_models": [],
+            "orbidb_models": [],
         };
         this.lshttpsModels = this.lshttpsModels.bind(this);
         this.lsIpfsModels = this.lsIpfsModels.bind(this);
         this.lsLocalModels = this.lsLocalModels.bind(this);
         this.lsS3Models = this.lsS3Models.bind(this);
+        this.lsOrbidbModels = this.lsOrbidbModels.bind(this);
         this.tmpFile = tmpFile;
         this.ipfsCollection = {};
         this.s3Collection = {};
         this.localCollection = {};
         this.httpsCollection = {};
+        this.orbidbCollection = {};
         this.pinned = [];
         this.fastest = null;
         this.bandwidth = null;
@@ -108,7 +111,8 @@ export class ipfsModelManager {
                 "local": "/storage/cloudkit-models/collection.json",
                 "s3": "s3://huggingface-models/collection.json",
                 "ipfs": "QmXBUkLywjKGTWNDMgxknk6FJEYu9fZaEepv3djmnEqEqD",
-                "https": "https://huggingface.co/endomorphosis/cloudkit-collection/resolve/main/collection.json"
+                "https": "https://huggingface.co/endomorphosis/cloudkit-collection/resolve/main/collection.json",
+                "orbidb": "QmXBUkLywjKGTWNDMgxknk6FJEYu9fZaEepv3djmnEqEqD"
             };
             meta = {
                 "localPath": this.localPath || localPath,
@@ -174,9 +178,9 @@ export class ipfsModelManager {
         switch (method) {
             case "loadCollection":
                 return this.loadCollection(kwargs);
-            case "download_model":
+            case "downloadModel":
                 return this.downloadModel(kwargs);
-            case "loadCollection_cache":
+            case "loadCollectionCache":
                 return this.loadCollectionCache(kwargs);
             case "autoDownload":
                 return this.autoDownload(kwargs);
@@ -184,19 +188,19 @@ export class ipfsModelManager {
                 return this.lsModels(kwargs);
             case "lsS3Models":
                 return this.lsS3Models(kwargs);
-            case "check_local":
+            case "checkLocal":
                 return this.checkLocal(kwargs);
-            case "check_https":
+            case "checkHttps":
                 return this.checkHttps(kwargs);
-            case "check_s3":
+            case "checkS3":
                 return this.checkS3(kwargs);
-            case "check_ipfs":
+            case "checkIpfs":
                 return this.checkIpfs(kwargs);
-            case "download_https":
+            case "downloadHttps":
                 return this.downloadHttps(kwargs);
-            case "download_s3":
+            case "downloadS3":
                 return this.downloadS3(kwargs);
-            case "download_ipfs":
+            case "downloadIpfs":
                 return this.downloadIpfs(kwargs);
             case "test":
                 return this.test(kwargs);
@@ -212,6 +216,16 @@ export class ipfsModelManager {
             console.log(e);
         });
         await this.ipfsKitJs.ipfsKitStart().then((results) => {
+            console.log(results);
+        }).catch((e) => {
+            console.log(e);
+        });
+        await this.orbitdbKit.orbitdbStop().then((results) => {
+            console.log(results);
+        }).catch((e) => {
+            console.log(e);
+        });
+        await this.orbitdbKit.orbitdbStart().then((results) => {
             console.log(results);
         }).catch((e) => {
             console.log(e);
@@ -313,12 +327,15 @@ export class ipfsModelManager {
         // }
     
         return {
-            // "ipfs_stop": ipfsStop,
-            // "ipfs_start": ipfsStart,
+            "ipfsStop": ipfsStop,
+            "ipfsStart": ipfsStart,
+            "orbitDbStart": orbitDbStart,
+            "orbitDbStop": orbitDbStop, 
             "ipfsCollection": this.ipfsCollection,
             "s3Collection": this.s3Collection,
             "localCollection": this.localCollection,
-            "httpsCollection": this.httpsCollection
+            "httpsCollection": this.httpsCollection,
+            "orbittdBCollection": this.orbitdbCollection,
         };
     }
 
