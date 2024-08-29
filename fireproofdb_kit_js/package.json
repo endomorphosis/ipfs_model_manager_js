@@ -1,0 +1,22 @@
+{
+	"name": "@endomorphosis/fireproofdb_kit_js",
+	"version": "1.0.0",
+	"description": "a bridge for fireproofdb",
+	"type": "module",
+	"main": "main.js",
+	"scripts": {
+		"test": "node tests/test.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/endomorphosis/fireproofdb_kit_js.git"
+	},
+	"dependencies": {
+	},
+	"author": "Benjamin Barber",
+	"license": "AGPL-3.0-only",
+	"bugs": {
+		"url": "https://github.com/endomorphosis/fireproofdb_kit_js/issues"
+	},
+	"homepage": "https://github.com/endomorphosis/fireproofdb_kit_js#readme"
+}
