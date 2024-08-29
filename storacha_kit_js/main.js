@@ -1,10 +1,12 @@
 export class storachaKitJs {
-    constructor() {
+    constructor(resources, metadata) {
+        this.resources = resources;
+        this.metadata = metadata;
     }
 
     async init() {
-        this.test();
         console.log("storachaKitJs.init()");
+        this.test();
         return null;
     }
 

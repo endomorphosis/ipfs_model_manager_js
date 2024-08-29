@@ -1,10 +1,12 @@
 export class FireproofKitJs {
-    constructor() {
+    constructor(resources, metadata) {
+        this.resources = resources;
+        this.metadata = metadata;
     }
 
     async init() {
-        this.test();
         console.log("FireproofKit.init()");
+        this.test();
         return null;
     }
 

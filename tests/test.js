@@ -1,9 +1,9 @@
-import ipfsModelManagerJs from ipfs_model_manager_js
 import libp2pKitJs from libp2p_kit_js
 import orbitDBKitJs from orbit_db_kit_js
 import ipfsFaissJs from ipfs_faiss_js
-import storachaKitJs from storacha_kit_js
-import fireproofDbKitJs from fireproofdb_kit_js
+import { storachaKitJs } from '../storacha_kit_js/main.js';
+import { fireproofDbKitJs } from '../fireproofdb_kit_js/main.js';
+import { ipfsModelManagerJs } from '../ipfs_model_manager_js/ipfs_model_manager.js';
 import { requireConfig } from "../config/config.js";
 import fs from "fs";
 import path from "path";
