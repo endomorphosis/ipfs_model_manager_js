@@ -7,11 +7,13 @@ import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
 import { ipfsHuggingfaceScraperJs } from  'ipfs_huggingface_scraper_js';
 import { orbitDbKitJs } from 'orbitdb_kit_js';
 import * as testFio from './test_fio.js';
-// import * as s3Kit from './s3_kit.js';
 import crypto from 'crypto';
-// import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
 import { requireConfig } from '../config/config.js';
+// import _ from 'lodash';
+// import * as s3Kit from './s3_kit.js';
+
+
 
 const tmpFile = new temp_file.TempFileManager()
 
@@ -123,7 +125,7 @@ export class ipfsModelManagerJs {
         this.testFio = new testFio.TestFio(resources, meta);
         this.ipfsKitJs = new ipfsKitJs(resources, meta);
         this.installIpfs = new installIpfs(resources, meta);
-        this.libp2pKit = new libp2pKit(resources, meta);
+        this.libp2pKit = new libp2pKitJs(resources, meta);
         this.s3Kit = this.libp2pKit.s3Kit(resources, meta);
         // this.s3Kit = new s3Kit.s3Kit(resources, meta);
         if (!fs.existsSync(this.ipfsPath)) {
