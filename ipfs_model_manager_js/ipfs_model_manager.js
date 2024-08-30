@@ -1,8 +1,6 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import util from 'util';
-import { promisify } from 'util';
 import { exec, execSync } from 'child_process';
 import { libp2pKitJs } from 'libp2p_kit_js';
 import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
@@ -10,16 +8,11 @@ import { ipfsHuggingfaceScraperJs } from  'ipfs_huggingface_scraper_js';
 import { orbitDbKitJs } from 'orbitdb_kit_js';
 import * as testFio from './test_fio.js';
 // import * as s3Kit from './s3_kit.js';
-import fsExtra from 'fs-extra';
 import crypto from 'crypto';
-import _ from 'lodash';
+// import _ from 'lodash';
 import * as temp_file from "./tmp_file.js";
 import { requireConfig } from '../config/config.js';
 
-const readFile = util.promisify(fs.readFile);
-const writeFile = util.promisify(fs.writeFile);
-const stat = util.promisify(fs.stat);
-const moveFile = util.promisify(fs.rename);
 const tmpFile = new temp_file.TempFileManager()
 
 export class ipfsModelManagerJs {
@@ -977,7 +970,7 @@ export class ipfsModelManagerJs {
 
         let timestamp_0 = Date.now();
         if (fs.existsSync(cache.local)) {
-            let data = await readFile(cache.local);
+            let data = fs.readFileSync(cache.local);
             this.localCollection = JSON.parse(data);
         }
         try {
@@ -992,7 +985,7 @@ export class ipfsModelManagerJs {
                     console.log(e);
                 }
             } else if (fs.existsSync('/tmp/collection.json')) {
-                let data = await readFile('/tmp/collection.json');
+                let data = fs.readFileSync('/tmp/collection.json');
                 try{
                     this.httpsCollection = JSON.parse(data);
                 }
@@ -1008,7 +1001,7 @@ export class ipfsModelManagerJs {
         try {
             let ipfsCollection = await this.downloadIpfs(cache.ipfs, '/tmp/collection.json');
             if (fs.existsSync(ipfsCollection)) {
-                let data = await fs.readFileSync(ipfsCollection, 'utf8');
+                let data = fs.readFileSync(ipfsCollection, 'utf8');
                 try{
                     this.ipfsCollection = JSON.parse(data);
                 }
@@ -1017,7 +1010,7 @@ export class ipfsModelManagerJs {
                     console.log(e);
                 }
             } else if (fs.existsSync('/tmp/collection.json')) {
-                let data = await readFile('/tmp/collection.json');
+                let data = fs.readFileSync('/tmp/collection.json');
                 try{
                     this.ipfsCollection = JSON.parse(data);
                 }
@@ -1033,7 +1026,7 @@ export class ipfsModelManagerJs {
         try {
             let s3Download = await this.downloadS3(cache.s3, '/tmp/collection.json');
             if (fs.existsSync(s3Download)) {
-                let data = await fs.readFileSync(s3Download, 'utf8');
+                let data = fs.readFileSync(s3Download, 'utf8');
                 try{
                     this.s3Collection = JSON.parse(data);
                 }
@@ -1043,7 +1036,7 @@ export class ipfsModelManagerJs {
                 }
             }
             else if (fs.existsSync('/tmp/collection.json')) {
-                let data = await readFile('/tmp/collection.json');
+                let data = fs.readFileSync('/tmp/collection.json');
                 try{
                     this.s3Collection = JSON.parse(data);
                 }
@@ -1143,7 +1136,7 @@ export class ipfsModelManagerJs {
         }
 
         if (fs.existsSync(cache.local)) {
-            let data = await readFile(cache.local);
+            let data = fs.readFileSync(cache.local);
             this.localCollection = JSON.parse(data);
         }
 
