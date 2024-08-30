@@ -1,4 +1,4 @@
-export class FireproofKitJs {
+export class fireproofDbKitJs {
     constructor(resources, metadata) {
         this.resources = resources;
         this.metadata = metadata;
@@ -16,4 +16,4 @@ export class FireproofKitJs {
     }
 }
 
-export default FireproofKitJs;
+export default fireproofDbKitJs;

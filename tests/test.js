@@ -1,17 +1,18 @@
-import libp2pKitJs from libp2p_kit_js
-import orbitDBKitJs from orbit_db_kit_js
-import ipfsFaissJs from ipfs_faiss_js
+import libp2pKitJs from 'libp2p_kit_js'
+import orbitDbKitJs from 'orbitdb_kit_js'
+import ipfsFaissJs from 'ipfs_faiss_js'
+import ipfsKitJs from 'ipfs_kit_js'
 import { storachaKitJs } from '../storacha_kit_js/main.js';
 import { fireproofDbKitJs } from '../fireproofdb_kit_js/main.js';
-import { ipfsModelManagerJs } from '../ipfs_model_manager_js/ipfs_model_manager.js';
+import { ipfsModelManagerJs } from 'ipfs_model_manager_js';
 import { requireConfig } from "../config/config.js";
 import fs from "fs";
 import path from "path";
 
 export default class testIpfsModelManager {
-    constructor() {
+    constructor(resources = {}, metadata = {}) {
         this.ipfsModelManager = new ipfsModelManagerJs(resources, metadata)
-        this.orbitDbKit = new orbitDBKitJs(resources, metadata)
+        this.orbitDbKit = new orbitDbKitJs(resources, metadata)
         this.ipfsFaiss = new ipfsFaissJs(resources, metadata)
         this.libp2pKit = new libp2pKitJs(resources, metadata)
         this.ipfsKit = new ipfsKitJs(resources, metadata)
@@ -78,7 +79,7 @@ export default class testIpfsModelManager {
                 meta[key] = this.config[key];
             }
         }
-        this.modelManager = new ipfsModelManager(null, meta);
+        this.modelManager = new ipfsModelManagerJs(resources, metadata);
     }
 
 
@@ -348,7 +349,7 @@ export default class testIpfsModelManager {
 }
 
 export class testS3Kit {
-    constructor() {
+    constructor(resources = {}, metadata = {}) {
         const endpoint = "https://object.ord1.coreweave.com"
         const access_key = "CWVFBNRZEEDYTAUM"
         const secret_key = "cwoBNj1ILmRGxcm18EsWE5Qth4hVtmtNJPkLVW2AETU"
@@ -410,8 +411,8 @@ export class testS3Kit {
                 meta[key] = this.config[key];
             }
         }
-        this.s3Kit = new s3Kit(s3cfg);
-        this.modelManager = new ipfsModelManager(null, meta);
+        this.libp2pKit = new libp2pKitJs(null, meta);
+        this.s3Kit = new this.libp2pKit.s3Kit(s3cfg);
     }
 
 	async test() {
@@ -508,6 +509,64 @@ export class testS3Kit {
 
 }
 
+export async function test_fio() {
+    const thisTest = new TestFio(null);
+    const results = thisTest.test("/tmp/");
+    console.log(results);
+    console.log("Test complete");
+}
+
+export async function test(){
+    const endpoint = "https://object.ord1.coreweave.com"
+    const access_key = "CWVFBNRZEEDYTAUM"
+    const secret_key = "cwoBNj1ILmRGxcm18EsWE5Qth4hVtmtNJPkLVW2AETU"
+    const host_bucket = "%(bucket)s.object.ord1.coreweave.com"
+    const bucket = "cloudkit-beta";
+    const ipfs_src = "QmXBUkLywjKGTWNDMgxknk6FJEYu9fZaEepv3djmnEqEqD";
+    const s3cfg = {
+        "endpoint": endpoint,
+        "accessKey": access_key,
+        "secretKey": secret_key,
+        "hostBucket": host_bucket,   
+        "bucket": bucket
+    };
+    const cluster_name = "cloudkit_storage";
+    //let ipfs_path = "/storage/";
+    const localPath = "/storage/cloudkit-models";
+    //ipfs_path = "/storage/ipfs/";
+    const ten_mins = 600;
+    const ten_hours = 36000;
+    const ten_days = 864000;
+    const never =  100000000;
+    const role = "worker";
+    const cache = {
+        "local": "/storage/cloudkit-models/collection.json",
+        "s3": "s3://cloudkit-beta/collection.json",
+        "ipfs": ipfs_src,
+        "https": "https://huggingface.co/endomorphosis/cloudkit-collection/resolve/main/collection.json"
+    };
+    const timing = {
+        "local_time": ten_mins,
+        "s3_time": ten_hours,
+        "ipfs_time": ten_days,
+        "https_time": never,
+    };
+    const meta = {
+        // "s3cfg": s3cfg,
+        "ipfs_src": ipfs_src,
+        "timing": timing,
+        "cache": cache,
+        "role": role,
+        "cluster_name": cluster_name,
+        //"ipfs_path": ipfs_path,
+        //"localPath": localPath,
+        //"ipfs_path": ipfs_path
+    };
+
+    const models_manager = new ipfsModelManagerJs(null, meta);
+    const results = await models_manager.test();
+    console.log(results);
+}
 
 if (import.meta.url === 'file://' + process.argv[1]) {
     const testModelManager = new testIpfsModelManager();

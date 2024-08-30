@@ -1,1 +1,1 @@
-export * from './main.js';
+export { fireproofDbKitJs } from './main.js';

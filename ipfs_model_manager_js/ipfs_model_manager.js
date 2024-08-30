@@ -4,9 +4,10 @@ import path from 'path';
 import util from 'util';
 import { promisify } from 'util';
 import { exec, execSync } from 'child_process';
+import { libp2pKitJs } from 'libp2p_kit_js';
 import { ipfsKitJs, installIpfs } from 'ipfs_kit_js';
-import ipfsHuggingfaceScraper from  'ipfs_huggingface_scraper_js';
-import orbitdbKit from 'orbitdb_kit';
+import ipfsHuggingfaceScraperJs from  'ipfs_huggingface_scraper_js';
+import orbitDbKitJs from 'orbitdb_kit_js';
 import * as testFio from './test_fio.js';
 import * as s3Kit from './s3_kit.js';
 import fsExtra from 'fs-extra';
@@ -21,7 +22,7 @@ const stat = util.promisify(fs.stat);
 const moveFile = util.promisify(fs.rename);
 const tmpFile = new temp_file.TempFileManager()
 
-export class ipfsModelManager {
+export class ipfsModelManagerJs {
     constructor(resources = null, meta = null) {
         this.thisDir = path.dirname(import.meta.url);
         if (this.thisDir.startsWith("file://")) {
@@ -123,14 +124,15 @@ export class ipfsModelManager {
                 "cache": this.cache,
             };
         }
-
         let homeDir = os.homedir();
         let homeDirFiles = fs.readdirSync(homeDir);
+        let ipfsPath = this.ipfsPath;
         this.testFio = new testFio.TestFio(resources, meta);
-        this.s3Kit = new s3Kit.s3Kit(resources, meta);
         this.ipfsKitJs = new ipfsKitJs(resources, meta);
         this.installIpfs = new installIpfs(resources, meta);
-        let ipfsPath = this.ipfsPath;
+        this.libp2pKit = new libp2pKit(resources, meta);
+        this.s3Kit = this.libp2pKit.s3Kit(resources, meta);
+        // this.s3Kit = new s3Kit.s3Kit(resources, meta);
         if (!fs.existsSync(this.ipfsPath)) {
             fs.mkdirSync(this.ipfsPath, { recursive: true });
         }
@@ -2033,3 +2035,5 @@ export class ipfsModelManager {
     }
 
 }
+
+export default ipfsModelManagerJs;

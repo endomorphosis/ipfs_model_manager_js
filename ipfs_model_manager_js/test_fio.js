@@ -1,7 +1,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-
+import tmp from 'tmp';
 
 export class TestFio {
     constructor(resources, meta = null) {
@@ -12,6 +12,7 @@ export class TestFio {
         this.path = process.env.PATH;
         this.path = this.path + ":" + path.join(this.thisDir, "bin")
         this.pathString = "PATH="+ this.path
+        this.tmp = tmp;
     }
 
     call(method, kwargs = {}) {
@@ -105,7 +106,7 @@ export class TestFio {
     }
 
     diskSpeed4k(location) {
-        const tempFile = tmp.fileSync({ postfix: '.iso', dir: location });
+        const tempFile = this.tmp.fileSync({ postfix: '.iso', dir: location });
         const timestamp_0 = Date.now();
         const command = `dd if=/dev/zero of=${tempFile.name} bs=4k count=8k conv=fdatasync`;
         execSync(command);
@@ -140,10 +141,3 @@ export class TestFio {
 
 }
 
-function test(){
-    const thisTest = new TestFio(null);
-    const results = thisTest.test("/tmp/");
-    console.log(results);
-    console.log("Test complete");
-    //process.exit(0);
-}
