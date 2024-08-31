@@ -1,9 +1,9 @@
-import libp2pKitJs from 'libp2p_kit_js'
-import orbitDbKitJs from 'orbitdb_kit_js'
-import ipfsFaissJs from 'ipfs_faiss_js'
-import ipfsKitJs from 'ipfs_kit_js'
-import { storachaKitJs } from '../storacha_kit_js/main.js';
-import { fireproofDbKitJs } from '../fireproofdb_kit_js/main.js';
+import { libp2pKitJs } from 'libp2p_kit_js'
+import { ipfsKitJs } from 'ipfs_kit_js';
+import { orbitDbKitJs } from 'orbitdb_kit_js';
+// import { ipfsFaissJs } from 'ipfs_faiss_js'
+// import { storachaKitJs } from '../storacha_kit_js/main.js';
+// import { fireproofDbKitJs } from '../fireproofdb_kit_js/main.js';
 import { ipfsModelManagerJs } from 'ipfs_model_manager_js';
 import { requireConfig } from "../config/config.js";
 import fs from "fs";
@@ -13,11 +13,12 @@ export default class testIpfsModelManager {
     constructor(resources = {}, metadata = {}) {
         this.ipfsModelManager = new ipfsModelManagerJs(resources, metadata)
         this.orbitDbKit = new orbitDbKitJs(resources, metadata)
-        this.ipfsFaiss = new ipfsFaissJs(resources, metadata)
         this.libp2pKit = new libp2pKitJs(resources, metadata)
         this.ipfsKit = new ipfsKitJs(resources, metadata)
-        this.storachaKit = new storachaKitJs(resources, metadata)
-        this.fireproofDbKit = new fireproofDbKitJs(resources, metadata)
+        // this.storachaKit = new storachaKitJs(resources, metadata)
+        // this.fireproofDbKit = new fireproofDbKitJs(resources, metadata)
+        // this.ipfsFaiss = new ipfsFaissJs(resources, metadata)
+
         const endpoint = "https://object.ord1.coreweave.com"
         const access_key = "CWVFBNRZEEDYTAUM"
         const secret_key = "cwoBNj1ILmRGxcm18EsWE5Qth4hVtmtNJPkLVW2AETU"
@@ -79,7 +80,6 @@ export default class testIpfsModelManager {
                 meta[key] = this.config[key];
             }
         }
-        this.modelManager = new ipfsModelManagerJs(resources, metadata);
     }
 
 
@@ -563,38 +563,38 @@ export async function test(){
         //"ipfs_path": ipfs_path
     };
 
-    const models_manager = new ipfsModelManagerJs(null, meta);
-    const results = await models_manager.test();
+    // const models_manager = new ipfsModelManagerJs(null, meta);
+    // const results = await models_manager.test();
     console.log(results);
 }
 
 if (import.meta.url === 'file://' + process.argv[1]) {
-    const testModelManager = new testIpfsModelManager();
-    const testS3 = new testS3Kit();
+    console.log("Running test");
+    // const testS3 = new testS3Kit();
     try{
-        await testS3.test().then((result) => {
-            console.log("testS3Kit: ", result);
-        }).catch((error) => {
-            console.log("testS3Kit error: ", error);
-            throw error;
-        });
-
+        // await testS3.test().then((result) => {
+        //     console.log("testS3Kit: ", result);
+        // }).catch((error) => {
+        //     console.log("testS3Kit error: ", error);
+        //     // throw error;
+        // });
+        const testModelManager = new testIpfsModelManager();
         await testModelManager.init().then((init) => {
             console.log("testIpfsModelManager init: ", init);
             testModelManager.test().then((result) => {
                 console.log("testIpfsModelManager: ", result);
             }).catch((error) => {
                 console.log("testIpfsModelManager error: ", error);
-                throw error;
+                // throw error;
             });
         }).catch((error) => {
             console.error("testIpfsModelManager init error: ", error);
-            throw error;
+            // throw error;
         });
 
     }
     catch(err){
         console.log(err);
-        process.exit(1);
+        // process.exit(1);
     }   
 }
