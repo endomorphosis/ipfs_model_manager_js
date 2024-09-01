@@ -126,7 +126,7 @@ export class ipfsModelManagerJs {
         this.ipfsKitJs = new ipfsKitJs(resources, meta);
         this.installIpfs = new installIpfs(resources, meta);
         this.libp2pKit = new libp2pKitJs(resources, meta);
-        this.s3Kit = this.libp2pKit.s3Kit(resources, meta);
+        // this.s3Kit = this.libp2pKit.s3Kit(resources, meta);
         // this.s3Kit = new s3Kit.s3Kit(resources, meta);
         if (!fs.existsSync(this.ipfsPath)) {
             fs.mkdirSync(this.ipfsPath, { recursive: true });

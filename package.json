@@ -28,7 +28,7 @@
 		"ipfs_kit_js": "^1.0.22",
 		"ipfs_huggingface_scraper_js": "^1.0.16",
 		"ipfs_model_manager_js": "^1.0.9",
-		"libp2p_kit_js": "^1.0.5",
+		"libp2p_kit_js": "^1.0.14",
 		"orbitdb_kit_js": "^1.0.9",
 		"is-stream": "^3.0.0",
 		"moment": "^2.30.1",
