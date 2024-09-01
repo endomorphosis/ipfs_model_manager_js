@@ -1,6 +1,6 @@
 {
 	"name": "ipfs_model_manager_js",
-	"version": "1.0.17",
+	"version": "1.0.18",
 	"description": "This is a model manager and wrapper for huggingface, and it maintains an index of models from collections of models store retrieved through local/https/s3/ipfs/orbitdb, then maintains a state of which what models are currently accesible, and it will choose what files should be cached through local/s3/ipfs/ based on configuration settings.",
 	"type": "module",
 	"main": "index.js",
