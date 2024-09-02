@@ -8,6 +8,9 @@ import { ipfsModelManagerJs } from 'ipfs_model_manager_js';
 import { requireConfig } from "../config/config.js";
 import fs from "fs";
 import path from "path";
+import os from "os";
+import { exec, execSync } from "child_process";
+import { t } from "tar";
 
 export default class testIpfsModelManager {
     constructor(resources = {}, metadata = {}) {
