@@ -12,7 +12,7 @@ import os from "os";
 import { exec, execSync } from "child_process";
 import { t } from "tar";
 
-export class testIpfsModelManagerJs {
+export class test_ipfs_model_manager_js {
     constructor(resources = {}, metadata = {}) {
         this.ipfsModelManager = new ipfsModelManagerJs(resources, metadata)
         this.orbitDbKit = new orbitDbKitJs(resources, metadata)
@@ -367,7 +367,7 @@ export class testIpfsModelManagerJs {
         return test_results;
     }
 }
-export default testIpfsModelManagerJs;
+export default test_ipfs_model_manager_js;
 
 export class testS3Kit {
     constructor(resources = {}, metadata = {}) {
@@ -601,7 +601,7 @@ if (import.meta.url === 'file://' + process.argv[1]) {
         //     console.log("testS3Kit error: ", error);
         //     // throw error;
         // });
-        const testModelManager = new testIpfsModelManager();
+        const testModelManager = new test_ipfs_model_manager_js();
         await testModelManager.init().then((init) => {
             test_results.init = init;
             console.log("testIpfsModelManager init: ", init);
@@ -649,3 +649,4 @@ if (import.meta.url === 'file://' + process.argv[1]) {
         // process.exit(1);
     }   
 }
+
