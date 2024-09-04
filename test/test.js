@@ -12,7 +12,7 @@ import os from "os";
 import { exec, execSync } from "child_process";
 import { t } from "tar";
 
-export class testIpfsModelManager {
+export class testIpfsModelManagerJs {
     constructor(resources = {}, metadata = {}) {
         this.ipfsModelManager = new ipfsModelManagerJs(resources, metadata)
         this.orbitDbKit = new orbitDbKitJs(resources, metadata)
@@ -367,7 +367,7 @@ export class testIpfsModelManager {
         return test_results;
     }
 }
-export default testIpfsModelManager;
+export default testIpfsModelManagerJs;
 
 export class testS3Kit {
     constructor(resources = {}, metadata = {}) {
