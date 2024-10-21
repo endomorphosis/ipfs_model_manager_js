@@ -4,7 +4,7 @@ import { orbitDbKitJs } from 'orbitdb_kit_js';
 // import { ipfsFaissJs } from 'ipfs_faiss_js'
 // import { storachaKitJs } from '../storacha_kit_js/main.js';
 // import { fireproofDbKitJs } from '../fireproofdb_kit_js/main.js';
-import { ipfsModelManagerJs } from 'ipfs_model_manager_js';
+import { ipfsModelManagerJs } from '../ipfs_model_manager_js/index.js';
 import { requireConfig } from "../config/config.js";
 import fs from "fs";
 import path from "path";
